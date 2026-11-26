@@ -18,11 +18,10 @@ of them.
 This rule exists so that the compiler may compute an expression ahead of time, and the runtime again at any time, and get the same value with no side effects.
 
 ```{rule} evaluation-is-pure
-Evaluating an expression results in a value and changes nothing: no variable,
-no attribute, no {term}`seed` and no page element. The value depends only on what the
-expression reads: variables, attributes, {term}`bindings <binding>`, the
-seeds of its random functions, and, for a read of a position, the frame of the
-expression that reads it ({doc}`world-model`).
+Evaluating an expression gives a value and changes nothing, no container, {term}`seed` or page
+element. The value depends only on what the expression reads: containers, {term}`bindings <binding>`,
+the seeds of its random functions, and, for a read of a position, the frame of the expression
+({doc}`world-model`).
 ```
 
 ## What a name means
@@ -51,9 +50,8 @@ to the circle, and `a` in `(slider s a (from 0) (to 2))` means the container `a`
 This rule exists to fix the order of evaluation, so that every compiler and runtime compute a call the same way.
 
 ```{rule} arguments-before-call
-In a call of a function, a built-in function or an {term}`operator`, every argument is evaluated,
-and then the result is computed from their values. The forms of
-{numref}`forms-evaluate-some-parts` are the only exceptions.
+A call of a function, a built-in function or an {term}`operator` evaluates every argument, then computes
+its result from their values. The forms of {numref}`forms-evaluate-some-parts` are the only exceptions.
 ```
 
 By {numref}`evaluation-is-pure`, and since every argument is evaluated, the order in which the
@@ -89,8 +87,8 @@ the value is the same.
 This rule exists so that a branch that can never run does not stop a source from compiling.
 
 ```{rule} known-condition-takes-one-branch
-When the test of an `if` is known in the prove step ({numref}`check-bodies-once`), the prove
-step checks only the branch that is taken. The other branch is neither checked nor folded.
+When the test of an `if` is known in the prove step ({numref}`check-bodies-once`), only the branch taken
+is checked and folded.
 ```
 
 So inside the body of a `foreach` or a motif, the prove step checks both branches of an `if` whose
@@ -179,10 +177,9 @@ built-in functions that they call result in `none` ({doc}`stdlib`).
 This rule exists so that an operation known to have no value is reported when compiling, rather than giving `none` on the page.
 
 ```{rule} none-at-known-inputs
-An operation whose inputs are known in the prove step ({numref}`check-bodies-once`), and are among
-the inputs at which it results in `none` ({numref}`operations-that-give-none`), is a compile error. So
-are `rand` and `rand-int` with both bounds known in the prove step and `lo` above `hi`, although
-their seed is never known when compiling.
+An operation whose inputs are known in the prove step ({numref}`check-bodies-once`) and give `none` by
+{numref}`operations-that-give-none` is a compile error, and so are `rand` and `rand-int` with both bounds
+known and `lo` above `hi`, though their seed is never known when compiling.
 ```
 
 So `(sqrt -1)`, `(or? (sqrt -1) 0)` and `(rand-int 10 3)` are compile errors. In
@@ -226,23 +223,18 @@ the type of each such expression includes `none` ({numref}`may-give-none`).
 This rule exists so that the runtime never stops on a missing value: `none` passes through to where it is handled.
 
 ```{rule} none-propagates
-An operation with an argument that is `none` results in `none`, at both times, with these
-exceptions:
+An operation with an argument that is `none` gives `none`, at both times, except:
 
-- `or?`, `none?`, `some?` and `somes`, which result in a value that is not `none` for an argument
-  that is `none` ({doc}`stdlib`).
-- `=` and `!=`, by {numref}`equality-by-content`.
-- A call of a function whose parameter has a type that includes `none`: the body is evaluated with
-  `none` as the parameter. A parameter whose type does not include `none` makes the call `none`,
-  and the body is not evaluated.
-- `(list-of …)`, which results in a list that holds `none` as an item. `(point-of …)` is not an
-  exception: a point with a coordinate that is `none` is `none`.
-- `if`, whose value is `none` only when the branch taken is `none`.
-- `map`, `reverse` and a read of an item of a list, which pass items that are `none` through.
+- `or?`, `none?`, `some?` and `somes`, which give a value that is not `none` ({doc}`stdlib`)
+- `=` and `!=` ({numref}`equality-by-content`)
+- a call whose parameter's type includes `none`, which evaluates its body with `none`. A parameter
+  whose type does not include `none` makes the call `none` without evaluating the body.
+- `(list-of …)`, which gives a list holding `none`. A point with a coordinate that is `none` is `none`.
+- `if`, which is `none` only when the branch taken is
+- `map`, `reverse` and a read of a list's item, which pass `none` items through
 
-An attribute of `none` is `none`: when `g[k]` is `none`, so is `g[k].pos`. An
-{term}`interpolated string` with a part that is `none` is `none`. A list function with `none` in
-place of its list results in `none`.
+An attribute of `none` is `none`, so is an {term}`interpolated string` with a part that is `none`, and so
+is a list function given `none` for its list.
 ```
 
 :::{admonition} Code differs
@@ -261,10 +253,9 @@ place of its list results in `none`.
 This rule exists because a test or a count that meets `none` has no value that the runtime could use.
 
 ```{rule} none-never-a-condition
-The test of an `if` and the value of the `(active …)` of a {term}`control` or a
-{term}`listener` are never `none`. Nor is an item of the list passed to `sum`, `count`, `min`,
-`max`, `any`, `all` or `reduce`. An expression that can evaluate to `none` in one of these places
-is a compile error ({doc}`types`).
+The test of an `if`, the `(active …)` of a {term}`control` or a {term}`listener`, and an item of the list
+given to `sum`, `count`, `min`, `max`, `any`, `all` or `reduce` are never `none`. An expression that can
+be `none` there is a compile error ({doc}`types`).
 ```
 
 A shape declared `T|none` is not drawn while it is `none`, and `none` as a `fill` or a `stroke`
@@ -308,26 +299,24 @@ mtp-ydd4.7.13.
 This rule exists to define arithmetic on points, which the runtime uses for positions.
 
 ```{rule} point-arithmetic
-The points form a vector space over the reals. `(+ p q)` and `(- p q)` add and subtract two points
-coordinate by coordinate, `(* r p)` and `(* p r)` multiply both coordinates of `p` by the real `r`,
-`(/ p r)` divides both by `r`, and `(- p)` negates both. The zero of the space is `[0 0]`.
+The points form a vector space over the reals: `+` and `-` work coordinate by coordinate, `(* r p)`,
+`(* p r)` and `(/ p r)` scale both coordinates by the real `r`, `(- p)` negates both, and the zero is
+`[0 0]`.
 ```
 
 This rule exists so that the compiler can give every arithmetic result a type before it is computed.
 
 ```{rule} number-result-types
-The result of an arithmetic operation has the broadest type of its inputs, in the order `int`,
-`ratio`, `real`, `complex`, with these exceptions:
+An arithmetic result has the broadest type of its inputs, in the order `int`, `ratio`, `real`, `complex`,
+except that:
 
-- `/` of an int by an int results in a ratio.
-- `^` of an int to an int power results in an int when the range of the power holds no negative
-  int, and in a ratio otherwise. With a {term}`complex` input it results in a complex, and
-  otherwise in a real.
-- `abs` of a complex results in a real.
+- `/` of two ints gives a ratio
+- `^` of an int to an int power gives an int when the power's range holds no negative int, and a ratio
+  otherwise. With a {term}`complex` input it gives a complex, and otherwise a real.
+- `abs` of a complex gives a real
 
-When the inputs of an operation include a real and an int or a ratio, the int or the ratio is
-first converted to the nearest real, and to the one of the two nearest reals whose last bit is 0
-when it lies exactly halfway between them.
+Where a real meets an int or a ratio, the int or the ratio is first converted to the nearest real, ties
+going to the real whose last bit is 0.
 ```
 
 ### The number limit
@@ -335,19 +324,16 @@ when it lies exactly halfway between them.
 This rule exists so that no number ever overflows, at either time.
 
 ```{rule} number-limit
-Every number lies within the number limit, from -10¹⁵⁰ to 10¹⁵⁰, when folded and while
-drawing:
+Every number lies within the number limit, -10¹⁵⁰ to 10¹⁵⁰, at both times:
 
-- The result of every operation and every built-in function is its exact value, rounded where it
-  is a binary64 number by {numref}`correctly-rounded-reals`, and then clamped to the number limit.
-  This holds for each number of a result: an int, a ratio, a real, each part of a complex number,
-  and each number of a point or of a list.
-- A number beyond the number limit that is written to a container is clamped to it. So is each
-  number of a point or a list that is written.
-- A {term}`literal` beyond the number limit is a compile error.
+- Every operation and built-in function gives its exact value, rounded where it is a binary64 number by
+  {numref}`correctly-rounded-reals`, then clamped to the limit, number by number, the parts of complex
+  numbers, points and lists included.
+- A number written to a container is clamped to the limit, number by number.
+- A {term}`literal` beyond the limit is a compile error.
 
-An int and a ratio are clamped to exactly -10¹⁵⁰ or 10¹⁵⁰. A real is clamped to the binary64
-number nearest to 10¹⁵⁰, written `1e150`, which lies just below 10¹⁵⁰, or to minus that number.
+An int or a ratio is clamped to exactly -10¹⁵⁰ or 10¹⁵⁰, and a real to `1e150`, the binary64 number
+nearest to 10¹⁵⁰, just below it, or to minus that number.
 ```
 
 So no operation overflows, and no operation results in `none` because of the size of its result. An
@@ -372,13 +358,11 @@ mtp-ydd4.7.18.
 This rule exists so that every compiler and runtime round a number to the same result.
 
 ```{rule} rounding
-Wherever a number is rounded, other than a channel of a mixed color
-({numref}`mixed-color-channels`), halves are rounded away from zero, on the number's shortest exact
-decimal form, not on its binary value: 2.5 is rounded to 3, -2.5 to -3, 0.125 to two decimal
-places to 0.13, and 2.675 to two decimal places to 2.68. The rule applies to `round`, to `places`, to a write
-to an int, and to the {term}`format spec` of an interpolated string, such as `{x:.2f}`. `round`
-results in `none` at no input. A number written to an int is rounded after it is clamped to the
-int's range, so that the result is the nearest int inside the range ({doc}`types`).
+Wherever a number is rounded, except a channel of a mixed color ({numref}`mixed-color-channels`), halves
+go away from zero, on the number's shortest exact decimal form: 2.5 gives 3, -2.5 gives -3, and 2.675 to
+two places gives 2.68. This applies to `round`, to `places`, to a write to an int, and to the
+{term}`format spec` of an interpolated string. `round` never gives `none`. A number written to an int is
+clamped to the int's range first ({doc}`types`).
 ```
 
 :::{admonition} Code differs
@@ -391,9 +375,8 @@ position. Bug mtp-6yga.
 This rule exists so that a color that the compiler mixes matches the color that a browser mixes.
 
 ```{rule} mixed-color-channels
-Each channel of a mixed color is rounded to a whole number, and a channel that lies exactly halfway
-between two whole numbers is rounded up, when folded and while drawing, as CSS `color-mix()` does
-in browsers.
+Each channel of a mixed color is rounded to a whole number, halves up, at both times, as CSS
+`color-mix()` does in browsers.
 ```
 
 So `(mix #'#000000' #'#050505' 0.5)` is `#030303ff`, since its channels are 2.5.
@@ -411,10 +394,9 @@ mtp-nk2w.
 This rule exists so that every random value can be computed again from a seed, and is the same on every page and in every compiler.
 
 ```{rule} seed-variable
-Every random value is computed from a seed: a free variable of the {term}`built-in type`
-`rand-seed`, whose values are the ints. A random function uses the seed named in it with
-`(seed s)`, and, with no `(seed …)`, the {term}`default seed` of the file that holds it
-({numref}`default-seed`). A `const` variable is not a seed.
+Every random value is computed from a seed, a free variable of the {term}`built-in type` `rand-seed`,
+whose values are the ints. A random function uses the seed of its `(seed s)`, or else the
+{term}`default seed` of its file ({numref}`default-seed`). A const variable is not a seed.
 ```
 
 The random functions `rand`, `rand-int`, `pick`, `shuffle` and `next-seed` are declared in the file
@@ -423,10 +405,9 @@ rand of the standard library ({numref}`rand-module`).
 This rule exists so that a random function with no `(seed …)` still has exactly one seed.
 
 ```{rule} default-seed
-The default seed of a file is the only seed among the names of its {term}`file scope`
-({numref}`scopes`). When the file scope holds no variable of type `rand-seed` at all, the default
-seed is the seed `seed` of the file rand of the standard library ({ref}`stdlib-rand`), if the source
-imports that file, directly or through other files. In every other case, the file has no default
+A file's default seed is the only seed among the names of its {term}`file scope` ({numref}`scopes`). When
+the file scope holds no variable of type `rand-seed`, it is the seed `seed` of the file rand
+({ref}`stdlib-rand`), if the source imports that file, directly or not. Otherwise the file has no default
 seed.
 ```
 
@@ -572,11 +553,10 @@ seed that is below 0 is a compile error. mtp-ydd4.7.30.
 This rule exists so that the compiler rejects an `=` whose result could only ever be false, or that would compare things with no equality.
 
 ```{rule} equality-operands
-`(= a b)` and `(!= a b)` are a compile error unless the type of one side is a {term}`subtype` of the type
-of the other, or one side is `none`. They are a compile error on functions, movements or
-animations, or on values whose type includes one of them, such as a list of functions. A list of two
-numbers is not converted to a point for them: `(= p xs)`, with `p` a point and `xs` a list of ints,
-is a compile error, and `(= p [1 2])` compiles, since `[1 2]` is a point.
+`(= a b)` and `(!= a b)` are a compile error unless one side's type is a {term}`subtype` of the other's or
+one side is `none`, and on a type that includes a function, a movement or an animation. A list of two
+numbers is not converted to a point: `(= p xs)`, with `p` a point and `xs` a list of ints, is a compile
+error.
 ```
 
 This rule exists to fix when two values are equal, so that every compiler and runtime give the same result.
@@ -615,12 +595,9 @@ not equality.
 This rule exists so that the runtime can recognize a value that a play or a stepper reached, even after small errors of rounding.
 
 ```{rule} matching
-Two values {term}`match` when they are equal, with one difference: two reals match when they
-differ by at most 10⁻¹² or by at most a millionth of the larger of their sizes. Points and lists
-match when they have the same length and the items at each position match. {term}`Bools <bool>`,
-strings, choices and colors match only when they are exactly the same, and `none` matches only
-`none`. Only the runtime matches values: no form of the language evaluates to whether two values
-match.
+Two values {term}`match` when they are equal, except that two reals match when they differ by at most
+10⁻¹² or by at most a millionth of the larger one's size, and points and lists of the same length match
+when their items do. Only the runtime matches values: no form gives whether two values match.
 ```
 
 The runtime matches values to read the step of a play or a stepper from the scene, and to check
@@ -642,11 +619,10 @@ could go on without end is a chain of calls. When folding, every chain ends at t
 This rule exists so that a function that calls itself can never run forever, when compiling or while drawing.
 
 ```{rule} call-depth-limit
-The depth of a call of a function, declared with `func` or written with `fn`, is 1 plus the number
-of such calls that are still being computed when it starts. Calls of built-in functions do not
-count. `max-call-depth`, the call depth limit, is 256. When a call is known in the prove
-step and folding it would start a call whose depth is above `max-call-depth`, the call is a compile
-error of the prove step ({numref}`step-rejects-or-passes`).
+The depth of a call of a function declared with `func` or written with `fn` is 1 plus the number of such
+calls still being computed when it starts. `max-call-depth`, the call depth limit, is 256. A call known in
+the prove step whose folding would go deeper is a compile error of the prove step
+({numref}`step-rejects-or-passes`).
 ```
 
 So with `(func[int] down ((int m)) (if (<= m 0) 0 (+ 1 (down (- m 1)))))`, `(down 255)` is folded
@@ -705,10 +681,8 @@ for the same values of what it reads.
 This rule exists so that the compiler and every runtime compute each built-in function to the same bits.
 
 ```{rule} correctly-rounded-reals
-Each binary64 number of the result of a built-in function or an operator (a real, a part of a
-complex number, a number of a point or of a list) is rounded from the exact value at its binary64
-inputs to the nearest binary64 number, and of the two nearest, to the one whose last bit is 0 when
-the exact value lies exactly halfway between them. This holds when folding and while drawing.
+Each binary64 number in the result of a built-in function or an operator is the binary64 number nearest
+to the exact value at its inputs, ties going to the one whose last bit is 0, at both times.
 ```
 
 This holds for `+`, `-`, `*`, `/`, `sqrt`, the trigonometric functions in radians and in degrees,
