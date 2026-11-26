@@ -71,22 +71,16 @@ This rule exists so that every compiler does the same work in the same order, an
 The compiler turns a source into a .mtpc in six steps, in this order:
 
 1. **Parse.** The {term}`parser` reads the text into {term}`forms <form>`, by the syntax alone
-   ({doc}`lexical`, {doc}`grammar`). It looks up no {term}`name`.
-2. **Rewrite.** Every name is resolved to its declaration ({ref}`scope`), and every {term}`syntactic sugar`
-   form is rewritten into {term}`core forms <core form>` ({numref}`sugar-form`). For example, `(pos [1 2])`
-   becomes `(x 1) (y 2)`. No value is computed and no type is used.
-3. **Prove.** Every {term}`expression` except a {term}`clause` is given a type, and every type, {term}`range`,
-   {term}`condition` and other invariant that the spec requires is proved ({doc}`types`,
-   {doc}`well-formedness`). This step proves and does nothing else.
-4. **Expand.** The core forms whose rewrite needs a type or a value are rewritten, with the types
-   and the values that the prove step worked out. Each `foreach` is written out as its copies, each
-   shape whose type is a motif as the {term}`body` of its motif with its arguments, and each `(A …)` for
-   an animation `A` as the body of `A` with the arguments of that `(A …)`. In the copies, the
-   shapes and the movements, the names built from values are replaced ({numref}`names-from-values`).
-5. **Fold.** Every expression known when compiling ({doc}`binding-time`) is replaced by its
-   value.
-6. **Write.** The model is written as the .mtpc ({doc}`compiled-format`), with every type that the
-   runtime needs.
+   ({doc}`lexical`, {doc}`grammar`).
+2. **Rewrite.** Each {term}`name` is resolved to its declaration ({ref}`scope`), and each
+   {term}`syntactic sugar` form is rewritten into {term}`core forms <core form>` ({numref}`sugar-form`).
+3. **Prove.** Each {term}`expression` except a {term}`clause` gets a type, and each {term}`condition` and
+   {term}`range` is proved ({doc}`types`, {doc}`well-formedness`).
+4. **Expand.** The forms that need a type or a value to be rewritten are rewritten, and each
+   `foreach`, motif and animation is written out as its copies, with the names built from values
+   replaced ({numref}`names-from-values`).
+5. **Fold.** Each expression known when compiling is replaced by its value ({doc}`binding-time`).
+6. **Write.** The model is written as the .mtpc ({doc}`compiled-format`).
 ```
 
 So a check that the parts of a syntactic sugar form are known when compiling is made in the prove step, and
@@ -96,16 +90,11 @@ as it is. Which forms are syntactic sugar, and the {term}`rewrite` of each, are 
 This rule exists so that a body that compiles works for every call and every copy of it, including calls added later, and so that compiling takes no longer as calls and copies are added.
 
 ```{rule} check-bodies-once
-The prove step checks each body once: the body of a function with each parameter ranging over
-every value of its declared type, the body of a `foreach` with its variable ranging over every
-value of its range, and the body of a motif or an animation with each parameter ranging over every
-value of its declared type and conditions. An imported motif or animation is checked once, in the file
-that declares it. The copies that a `foreach` makes, each `(M …)` for a motif `M`, and each `(A …)` for an
-animation `A` are not checked again. A motif or animation body that is safe for only some values of a
-parameter is a {term}`compile error`, unless the parameter is declared with a condition that leaves out
-the other values. An expression is known in the prove step when it is known when compiling
-({doc}`binding-time`) and does not read, inside the body of a `foreach`, a function, a motif or an
-animation, the variable of that `foreach` or a parameter of that function, motif or animation.
+The prove step checks the body of each function, `foreach`, motif and animation once, with each
+parameter or variable ranging over every value that it can take. Its copies and calls are not
+checked again, and an imported body is checked in its own file. A body that is safe for only some
+of those values is a {term}`compile error`. An expression is known in the prove step when it is known
+when compiling ({doc}`binding-time`) and reads no parameter or variable of a body around it.
 ```
 
 So an error in such a body is about the body as written, and not about a copy or about one `dot`. For
@@ -117,12 +106,10 @@ motif compiles.
 This rule exists so that compiling a source gives either one error from one step or a complete .mtpc, and never a partial .mtpc.
 
 ```{rule} step-rejects-or-passes
-The parse, rewrite and prove steps each either reject the source or pass their output to the next
-step. The parse step rejects with a {term}`syntax error`, and the rewrite and prove steps with a
-compile error ({doc}`errors`). When a step rejects the source, no later step runs. The
-expand, fold and write steps never reject a source that the prove step passed, so the
-compiler either rejects a source or writes a .mtpc that is valid by {doc}`compiled-format`, and
-never both.
+Each of the parse, rewrite and prove steps either rejects the source, the parse step with a
+{term}`syntax error` and the others with a compile error ({doc}`errors`), or passes it on. No step runs
+after a rejection, and the later steps never reject. So the compiler either rejects a source or
+writes a valid .mtpc ({doc}`compiled-format`).
 ```
 
 What the error of a rejected source holds is given in {numref}`conformance`.
@@ -130,10 +117,9 @@ What the error of a rejected source holds is given in {numref}`conformance`.
 This rule exists to specify what the compiler does when it cannot prove a condition of a bound container, instead of rejecting the source.
 
 ```{rule} prover-finds-ranges
-To prove a range or a condition, the {term}`prover` works out ranges ({numref}`ranges`,
-{numref}`range-rules`). The prover writes nothing to the model. Where the range of a bound
-variable or attribute does not lie inside its condition, the prover gives the variable or attribute a type that includes `none`, and the write step writes the `check`
-that this type needs ({doc}`compiled-format`).
+The {term}`prover` proves conditions by working out ranges ({numref}`ranges`). Where the range of a bound
+container does not lie inside its conditions, the type of the container includes `none`, and the
+.mtpc holds the `check` for it ({doc}`compiled-format`).
 ```
 
 So `(circle c (r (- 1 2)))` is a compile error in the prove step, since the range of `(- 1 2)` is
@@ -156,9 +142,8 @@ Bead mtp-08wd.1 changes the compiler to use this order of steps and to check eac
 This rule exists to fix what the compiler is given and what it produces.
 
 ```{rule} compiler-input-output
-The compiler is given one source file. It reads that file and the files that it imports
-({numref}`compiler-reads-files`), and then either rejects the source with an error
-({numref}`conformance`) and writes no .mtpc, or writes one .mtpc for it.
+The compiler is given one source file, and either rejects it with an error ({numref}`conformance`) or
+writes one .mtpc for it.
 ```
 
 How the compiler is run, such as the name of a command, its options, where it writes the .mtpc and
@@ -175,33 +160,29 @@ This rule exists because the reader waits for the runtime, and not for the compi
 
 ```{rule} compiler-decides-early
 Everything that can be decided when compiling is decided when compiling, even when that makes
-compiling slower. Nothing that the compiler could have decided is left for the runtime to decide
-while the reader waits.
+compiling slower.
 ```
 
 This rule exists so that a .mtpc can be rebuilt, compared and cached by its bytes.
 
 ```{rule} compiler-same-bytes
-The compiler is deterministic: the same source and the same imported files always give the same
-bytes ({doc}`compiled-format`, "Same source, same bytes").
+The same source and the same imported files always give the same .mtpc, byte for byte
+({doc}`compiled-format`).
 ```
 
 This rule exists so that the files that the compiler reads, and so the .mtpc that it writes, follow from the source alone.
 
 ```{rule} compiler-reads-files
-The compiler reads only the source file and the files that it imports, directly or through other
-imports. An import is looked for in the folder of the file that imports it, then in the
-{term}`standard library` ({ref}`scope`, {doc}`stdlib`).
+The compiler reads only the source and the files that it imports, directly or not. An import is
+looked for next to the file that imports it, then in the {term}`standard library` ({doc}`stdlib`).
 ```
 
 This rule exists because what happens while drawing depends on the reader and on the page, and neither is there when compiling.
 
 ```{rule} compiler-never-acts-while-drawing
-The compiler never does what happens only while drawing ({doc}`binding-time`). It never runs a
-writer: it never plays an animation, never performs a write that a control or a listener
-would perform, and never acts as a reader would. It never reads a page, its CSS or its color scheme,
-and so never folds a font: a font is written with its declared value, which the runtime uses where
-the page gives none.
+The compiler never does what happens only while drawing ({doc}`binding-time`): it never runs a
+writer and never reads a page. So it never folds a font: a font is written with its declared value,
+which the runtime uses where the page sets none.
 ```
 
 So the compiler never draws a random value, since a random value is known only while drawing
@@ -262,15 +243,11 @@ Nothing else is needed in the page: it holds no script of its own and calls no f
 This rule exists to specify how the runtime gets each .mtpc, and what it does when it cannot.
 
 ```{rule} runtime-loads-mtpc
-The runtime loads each .mtpc given by the `src` attribute of an `<mtp-model>` element, once,
-from a file that it fetches or from a block in the page ({doc}`page-interface`). When the .mtpc
-cannot be fetched or read as JSON, the model fails to load, and the runtime puts the error in place of every
-component of that model on the page. The runtime reads only .mtpc files that state a version of
-this spec that it implements, and which versions those are is not normative. It refuses a .mtpc of
-another version, a .mtpc that does not match the schema of
-its version ({doc}`compiled-format`), and every {term}`corrupt <corrupt .mtpc>` .mtpc
-({numref}`corrupt-mtpc`). A .mtpc that the runtime refuses fails to load too, and the runtime runs
-no part of it. For a .mtpc of another version, the error gives both versions.
+The runtime loads each .mtpc that an `<mtp-model>` element names, once ({doc}`page-interface`). It
+refuses a .mtpc that it cannot fetch or read, one of a version that it does not implement, one that
+does not match its schema, and a {term}`corrupt <corrupt .mtpc>` one ({numref}`corrupt-mtpc`). Which versions it
+implements is not normative. It runs no part of a refused .mtpc, and shows the error in place of
+each component of its model, with both versions when they differ.
 ```
 
 :::{admonition} Code differs
@@ -284,10 +261,8 @@ something wrong with no error. mtp-ydd4.7.27.
 This rule exists because a reader cannot fix an error.
 
 ```{rule} no-errors-after-loading
-Once a .mtpc has loaded, nothing that a reader does and nothing that the runtime computes makes a
-component or the page fail or show an error. A source in which something could fail after loading
-is rejected when compiling, and a .mtpc in which something could fail is refused when it is
-loaded ({numref}`runtime-loads-mtpc`).
+Once a .mtpc has loaded, nothing that the reader does and nothing that the runtime computes makes
+the page show an error.
 ```
 
 This rule follows from a principle of the design of mtp: a state that breaks a rule of the spec
@@ -303,32 +278,26 @@ gap is closed by changing the language, never by showing an error to the reader.
 This rule exists to specify when the runtime does its work, so that it does each piece of work once and not on every frame.
 
 ```{rule} runtime-builds-live-model
-When a .mtpc loads, the runtime builds its live model, once, before it draws any component: it turns
-every expression into a function, once, and sets every free container to its starting value,
-reading each `free` start once ({doc}`compiled-format`, "Free and bound containers"). Then it
-keeps the live model current as the reader acts: after each write, it computes again only what
-depends on what changed, and the views draw again ({doc}`reactivity`, {doc}`time`,
-{doc}`concurrency`).
+When a .mtpc loads, before it draws anything, the runtime builds the live model once: it turns each
+expression into a function and sets each free container to its starting value. After each write,
+it computes again only what depends on what changed ({doc}`reactivity`).
 ```
 
 This rule exists to specify how the elements of a page are tied to the views and controls of a model.
 
 ```{rule} runtime-serves-components
-The runtime defines one page element for each kind of view and control, and
-serves each element that the page places: in each element, it draws the view or control of the
-element's model that the element's `name` attribute gives. A listener has no element: it
-acts on each element that draws its shape or term, or, for a listener such as `on-view`, on its
-own view ({doc}`page-interface`, {doc}`lifecycle`).
+The runtime defines a page element for each kind of view and control, and in each one draws the
+view or control that its `name` attribute names ({doc}`page-interface`). A listener has no element:
+it acts in each element that draws its shape or term, or, for `on-view`, in its view
+({doc}`lifecycle`).
 ```
 
 This rule exists so that a world model holds exactly what its source declares, whatever the runtime draws.
 
 ```{rule} runtime-adds-no-objects
-What a world model holds is decided by the illustrator alone: the objects of a live model are
-those specified in the source, through declarations and the compounds that result in a new object
-({doc}`data-model`), and the runtime adds or removes no other object. What the runtime draws beyond the objects of the live model changes only how a component
-looks. It is not an object of the live model, no expression and no writer of the world model reads
-it, and it never writes to a variable or an attribute of the live model.
+The objects of a live model are exactly those that its source creates ({doc}`data-model`). What the
+runtime draws beyond them, such as a stand-in, only changes how a component looks: nothing reads it,
+and it writes to nothing.
 ```
 
 For example, while an `on-show` or an `on-hide` plays, the runtime draws a stand-in in the canvas in place of the
@@ -339,11 +308,9 @@ stand-in.
 This rule exists because the compiler has already checked every type, so checking types again while drawing would only slow the runtime.
 
 ```{rule} runtime-no-type-work-while-drawing
-While drawing, the runtime never checks whether a value has its type, and never converts a value
-from one type to another. The compiler has checked every type, and every type that the runtime
-needs is written in the .mtpc. Bringing a written value into the conditions of the container that it is written
-to, by clamping, rounding, wrapping or holding it ({doc}`types`), is part of what a write does,
-and is not a check of a type. How the runtime does this is not normative.
+While drawing, the runtime never checks or converts a type, since the compiler has checked every
+type. Bringing a written value into the conditions of its target is part of the write
+({numref}`writes-to-conditions`), and not a type check.
 ```
 
 ## The .mtpc between the compiler and the runtime
@@ -351,10 +318,8 @@ and is not a check of a type. How the runtime does this is not normative.
 This rule exists so that a compiler and a runtime can be written separately and still work together.
 
 ```{rule} any-compiler-any-runtime
-Every conforming compiler works with every conforming runtime. Every conforming runtime that
-implements the version of this spec that a .mtpc states runs it, whichever conforming compiler wrote it.
-Two conforming compilers may write different bytes for one source ({numref}`what-is-normative`),
-and every conforming runtime makes the same open page from both files.
+Every conforming runtime runs every .mtpc of a version that it implements, whichever conforming
+compiler wrote it, and makes the same page from any two .mtpc files of one source.
 ```
 
 So an implementation of the compiler and an implementation of the runtime can be built apart, by
@@ -364,9 +329,8 @@ know about the other. This is why the format of the .mtpc is defined in full in 
 This rule exists so that what the runtime does is determined by the .mtpc and the page alone.
 
 ```{rule} mtpc-only-boundary
-The .mtpc is the only file that passes from the compiler to the runtime. No other file, no call
-and no shared state passes between them. Besides the .mtpc, the runtime reads only the page: its
-elements, the values that its CSS gives the fonts, its color scheme, the pointer, the keyboard and
+The .mtpc is all that passes from the compiler to the runtime. Besides it, the runtime reads only
+the page: its elements, the fonts that its CSS sets, its color scheme, the pointer, the keyboard and
 the clock.
 ```
 
@@ -376,19 +340,15 @@ that a `foreach` makes is written out in the .mtpc ({numref}`compile-steps`).
 This rule exists to name the .mtpc files that the runtime may refuse, even though they match the schema.
 
 ```{rule} corrupt-mtpc
-A .mtpc that matches the schema of its version and breaks a rule of this spec is
-corrupt. Among the corrupt files are a .mtpc with a reference to an
-object that it does not hold, one with an expression that can evaluate to a value of
-another type than the type written with it, one with a `deps` list that leaves out something that
-its expression can read, and one with an expression known when compiling that is not folded. A
-conforming compiler never writes a corrupt .mtpc.
+A .mtpc that matches its schema but breaks a rule of this spec is corrupt, such as one that refers
+to an object that it does not hold, or that leaves an expression known when compiling unfolded. A
+conforming compiler never writes one.
 ```
 
 This rule exists so that a runtime can catch as many corrupt files as possible with the schema alone.
 
 ```{rule} schema-strength
-The schema of each version of this spec holds every rule of {doc}`compiled-format` that a JSON
-schema can express, so that as few corrupt files as possible match it.
+The schema of each version holds every rule of {doc}`compiled-format` that a JSON schema can express.
 ```
 
 So the runtime refuses a corrupt .mtpc ({numref}`runtime-loads-mtpc`), although it matches the
@@ -397,11 +357,9 @@ schema. How the runtime finds that a .mtpc is corrupt is not part of this spec.
 This rule exists so that the version of this spec that applies to a .mtpc can be read from the .mtpc alone.
 
 ```{rule} spec-version
-The versions of this spec are numbered 1, 2, 3 and so on. A version gets the next number when it
-is published, and the draft of a version states the number that it will have. Every .mtpc states,
-as the whole number in its member `mtpc`, the version of this spec that its compiler implements.
-The format of the .mtpc and its schema are part of this spec, so two .mtpc files that state the
-same version are read by the same rules.
+The versions of this spec are numbered 1, 2, 3 and so on, in the order in which they are published,
+and a draft states the number that it will have. Every .mtpc states, in its member `mtpc`, the
+version that its compiler implements.
 ```
 
 ## Conformance
@@ -409,11 +367,9 @@ same version are read by the same rules.
 This rule exists to separate what every implementation must give the same from what each may choose.
 
 ```{rule} what-is-normative
-These are normative, and every conforming implementation gives the same: which sources are
-accepted and which are rejected, the meaning of the .mtpc, and what the runtime does. These are
-not normative: everything about an error beyond what {numref}`conformance` requires, such as its
-wording and the position that it gives, the bytes of the .mtpc, and how the compiler is run
-({numref}`compiler-input-output`).
+Every conforming implementation gives the same: which sources are accepted, the meaning of each
+.mtpc, and what the runtime does. Nothing else is normative, such as the wording of an error, the
+bytes of a .mtpc, or how the compiler is run.
 ```
 
 So two conforming compilers may write different bytes for one source, as long as a runtime builds
@@ -423,19 +379,14 @@ order, so one compiler may write `{"r": 1, "x": 0}` where another writes `{"x": 
 This rule exists to define when an implementation of the compiler or of the runtime conforms to this spec.
 
 ```{rule} conformance
-- An implementation of the compiler conforms to this spec when, for every source and the files
-  that it imports, it rejects the source if and only if the source breaks a rule of this spec, and otherwise writes
-  a .mtpc that has the meaning that {doc}`compiled-format` defines for the world model of the
-  source. Every error with which the compiler rejects a source carries the label of at least one rule that the source
-  breaks, among the rules checked in the step that rejects the source
-  ({numref}`step-rejects-or-passes`). The label of a rule is the name that this spec gives it, such
-  as `declare-before-use`. When the source breaks several of these rules, the error carries the
-  label of any one of them, of several, or of all.
-- An implementation of the runtime conforms when it loads every valid .mtpc of the versions that
-  it implements, and builds and keeps current its live model as the pages from {doc}`world-model`
-  to {doc}`accessibility` define.
+- A compiler conforms when it rejects exactly the sources that break a rule of this spec, and
+  otherwise writes a .mtpc with the meaning that {doc}`compiled-format` defines. Each error carries
+  the label of at least one broken rule checked in the step that rejects the source, such as
+  `declare-before-use`.
+- A runtime conforms when it loads every valid .mtpc of the versions that it implements, and keeps
+  its live model as this spec defines.
 
-Each conforms only when it also obeys every rule of this page about it.
+Each conforms only when it also follows every rule of this page about it.
 ```
 
 :::{admonition} Code differs
