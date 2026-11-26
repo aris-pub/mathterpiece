@@ -16,15 +16,13 @@ that breaks a rule of this page is rejected in the rewrite step. A name built fr
 This rule exists to separate the forms that create something from the forms that only name a value.
 
 ```{rule} declarations-and-bindings
-A declaration is a {term}`form` that creates a variable, a type or an object, or, for an `import`,
-makes the names of another file usable ({doc}`data-model`). What it creates exists whether or not
-the source gives it a name, so `(circle_ (r 1))` creates a circle that has no name. A binding gives a name to a value
-for a part of a source, and creates nothing: the names of a `let` and of a `foreach`, and the
-parameters of a function, a motif, a variant or an animation, are bindings, and so is the name in
-the optional clause `(as N)` of a motif or of a pointer listener. In a motif, `N` is the shape being
-declared, and in a listener, the position of the pointer ({numref}`pointer-binding`). The language
-binds no name of its own. The names that an `import`
-makes usable refer to what the declarations of another file create ({doc}`imports`).
+A declaration is a {term}`form` that creates a variable, a type or an object, or, for an `import`, makes
+the names of another file usable ({doc}`data-model`). What it creates exists whether or not it has a
+name: `(circle_ (r 1))` creates a circle with no name. A binding names a value for part of a source and
+creates nothing. The bindings are the names of a `let` and a `foreach`, the parameters of a function,
+a motif, a variant or an animation, and the `N` of an `(as N)`, which is the shape being declared in a
+motif and the pointer's position in a listener ({numref}`pointer-binding`). The language binds no name of
+its own.
 ```
 
 So `(real a 1)`, `(circle c (r a))`, `(canvas v s)`, `(func twice ((real x)) (* 2 x))` and
@@ -107,12 +105,10 @@ of a shape of that motif, as `d1.face` ({doc}`data-model`).
 This rule exists so that the compiler can resolve every name in one pass, and so that no value can depend on a value declared after it.
 
 ```{rule} declare-before-use
-A use of a name refers only to a declaration or a binding that comes before the use, in every
-scope, with no exceptions, and a name that an import makes usable may be used only after the import. The
-order is the order of the source after the rewrite step, with each `foreach` read as its copies, in
-the order of the copy index. A declaration, a binding or an import comes before a use when its
-form starts before the use. A use of a name inside the form that declares or binds it is allowed
-only as {numref}`self-reference` allows.
+A use of a name refers only to a declaration, a binding or an import that comes before it, in every
+scope, with no exceptions. The order is that of the source after the rewrite step, each `foreach`
+read as its copies in order, and something comes before a use when its form starts before it. A use
+inside the form that declares or binds the name is allowed only as {numref}`self-reference` allows.
 ```
 
 So two functions may not call each other, since one of them would use the name of the other before
@@ -140,20 +136,16 @@ In the scene and in the body of a motif, the compiler follows this. In a group,
 This rule exists so that every compiler resolves each name to the same declaration.
 
 ```{rule} name-lookup
-A use of a name, and the first {term}`name part` of a {term}`qualified name`, refers to what these
-steps find, in order:
+A use of a name, and the first {term}`name part` of a {term}`qualified name`, refers to the first of:
 
-1. Among the scopes around the use, from the innermost outwards to the file scope, the first that
-   has the name among its names before the use ({numref}`declare-before-use`). The use refers to
-   the declaration or the binding of the name in that scope, or, for a name that an import gives,
-   to the declaration in the imported file.
-2. A built-in function or a built-in constant of that name ({doc}`stdlib`).
+1. The declaration or binding of the name in the innermost scope around the use that has the name
+   before the use ({numref}`declare-before-use`), or, for an imported name, its declaration in the
+   imported file.
+2. A built-in function or constant of that name ({doc}`stdlib`).
 
-When neither step finds the name, the source is a {term}`compile error`. When the file rand of the
-standard library gives a name of that text ({ref}`stdlib-rand`), the message is "N comes from the
-standard library: (import rand N)", with `N` the name. When the name is `rand` and has a second
-name part `N` that the file rand gives, the message is "rand.N comes from the standard library:
-(import rand)".
+When neither finds the name, the source is a {term}`compile error`. When the file rand gives a name of
+that text ({ref}`stdlib-rand`), the message is "N comes from the standard library: (import rand N)",
+and for `rand.N` it is "rand.N comes from the standard library: (import rand)".
 ```
 
 So a source that calls `(rand-int 1 6)` and imports no `rand-int` is a compile error, "rand-int
@@ -182,12 +174,10 @@ In this example, the parameter `x` hides the variable `x` inside `tenfold`, so `
 This rule exists so that every name in a scope refers to exactly one thing.
 
 ```{rule} one-declaration-per-scope
-In one scope, a name is declared or bound at most once, whatever the kinds of the declarations
-and the bindings. A variable, a shape, a function, a type, an {term}`interface`, a motif, a
-variant, an animation, a {term}`component` and every other declaration share the names of their
-scope, and so do the bindings and the names that imports give. In the same way, the parameters of
-one form, the names of one `let` and the names of one `foreach` are all different. A second
-declaration, binding or import of a name in the same scope is a compile error.
+In one scope, a name is declared, bound or imported at most once, whatever the kinds involved: every
+declaration, binding and imported name of a scope shares one set of names. The parameters of one
+form, and the names of one `let` or one `foreach`, are also all different. A second one is a
+compile error.
 ```
 
 So `(type unit real (>= 0) (<= 1))` followed by `(real unit 1)` is a compile error, and so is a
@@ -205,8 +195,8 @@ mtp-ydd4.7.41.
 This rule exists so that a name inside a motif never means something other than the same name at the top level of its file.
 
 ```{rule} motif-names-hide-nothing
-A shape or a variable declared in the body of a motif never takes a name that the file declares at
-its top level, or that an `(import F N…)` gives, before the motif. Such a declaration is a compile
+A shape or a variable declared in the body of a motif may not take a name that its file declares at
+the top level, or that an `(import F N…)` gives, before the motif. Such a declaration is a compile
 error.
 ```
 
@@ -226,13 +216,10 @@ The file scope of an imported file, and the names that an import gives, are defi
 This rule exists so that a keyword or a built-in type always means the same thing wherever it is written.
 
 ```{rule} declaration-names
-No declaration and no binding may take as its name a {term}`keyword` ({numref}`keywords`) or a
-{term}`built-in type`. This holds for every kind of declaration and binding: a variable, a shape, a
-function, a parameter, a name of a `let` or a `foreach`, an attribute of a record, a member of a
-formula, a motif, a font, and every other. The built-in types are listed in {numref}`the-types`. Nor may it take the name of an
-{term}`operator`. A declaration or a binding may take the name of any other built-in function, or
-of a built-in constant (`pi`, `tau` and `euler`): from that declaration or binding on, the name refers to what it declares or binds
-({numref}`name-lookup`).
+No declaration or binding, of any kind, may take as its name a {term}`keyword` ({numref}`keywords`), a
+{term}`built-in type` ({numref}`the-types`) or an {term}`operator`. It may take the name of any other
+built-in function or constant, such as `pi`, and from there on the name refers to what it declares or
+binds ({numref}`name-lookup`).
 ```
 
 So `(real if 1)` and `(circle line …)` are compile errors, and
