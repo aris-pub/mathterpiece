@@ -112,9 +112,10 @@ def _word(lexer, match):
 
 
 class MtpSigLexer(RegexLexer):
-    """Signatures, written ```mtp-sig (Overview, "How signatures are written"). The author,
-    2026-11-23: the head in bold, each type in gray and each default in brown. The colors come
-    from mtp.css, which reads the token classes k (the head), nb (a type) and l (a default)."""
+    """Signatures, written ```mtp-sig (Overview, "How signatures are written"), in the colors of
+    editors/mtp-mode.el (the author, 2026-11-27): the head as a form head, a name in capitals as a
+    declared name, an argument's name as a keyword argument, a type as a type, and a default as a
+    number, a string or a constant. mtp.css gives each token class its color."""
 
     name = "mtp-sig"
     aliases = ["mtp-sig"]
@@ -123,24 +124,54 @@ class MtpSigLexer(RegexLexer):
             # A comment line heads a group of signatures in one block (the author, 2026-11-27).
             (r"^;.*$", Comment),
             (r"^(\()([a-z][\w-]*)", bygroups(Punctuation, Keyword)),
-            (r":", Name.Builtin, "type"),
+            (r"(\()(like)(\s+)([\w-]+)(\))", bygroups(Punctuation, Name.Attribute, Whitespace, Name.Builtin, Punctuation)),
+            (r"(\()([a-z][\w-]*)(:)", bygroups(Punctuation, Name.Attribute, Punctuation), "argtype"),
+            (r"(\()([a-z][\w-]*)(?=\s)", bygroups(Punctuation, Name.Attribute)),
+            (r"([A-Z][A-Z0-9_]*)(:)", bygroups(Name.Variable, Punctuation), "type"),
+            (r"[A-Z][A-Z0-9_]*", Name.Variable),
             (r"\s+", Whitespace),
             (r"[()]", Punctuation),
             (r"'[^']*'", String),
-            (r"[^\s():']+", Name),
+            (r"[^\s():']+", Text),
         ],
-        # A type runs to the first space or ')' outside its own parentheses. A default is the one
-        # item between a type and the ')' that closes a named argument.
+        # A type runs to the first space or ')' outside its own parentheses.
         "type": [
-            (r"\(", Name.Builtin, "type-parens"),
-            (r"[\w|*+?.-]+", Name.Builtin),
-            (r"( )('[^']*'|[^\s()']+)(?=\))", bygroups(Whitespace, Literal), "#pop"),
+            (r"\(", Punctuation, "type-parens"),
+            (r"[\w|*+?.\[\]-]+", Name.Builtin),
+            default("#pop"),
+        ],
+        # The type of a named argument, then its default, which runs to the ')' that closes it.
+        "argtype": [
+            (r"\(", Punctuation, "type-parens"),
+            (r"[\w|*+?.\[\]-]+", Name.Builtin),
+            (r" ", Whitespace, ("#pop", "default")),
             default("#pop"),
         ],
         "type-parens": [
-            (r"\(", Name.Builtin, "#push"),
-            (r"\)", Name.Builtin, "#pop"),
-            (r"[^()]+", Name.Builtin),
+            (r"\(", Punctuation, "#push"),
+            (r"\)", Punctuation, "#pop"),
+            (r"'[^']*'", String),
+            (r"-?\d[\d.e-]*", Number),
+            (r"(>=|<=|!=|>|<|=)", Operator),
+            (r"\s+", Whitespace),
+            (r"[\w|*+?.\[\]-]+", Name.Builtin),
+        ],
+        "default": [
+            (r"'[^']*'", String),
+            (r"(none|true|false)\b", Keyword.Constant),
+            (r"-?\d[\d.e]*", Number),
+            (r"[{}\[\]]", Punctuation),
+            (r"\(", Punctuation, "default-parens"),
+            (r"\s+", Whitespace),
+            (r"\)", Punctuation, "#pop"),
+            (r"[^\s()'{}\[\]]+", Text),
+        ],
+        "default-parens": [
+            (r"\(", Punctuation, "#push"),
+            (r"\)", Punctuation, "#pop"),
+            (r"[a-z][\w-]*", Keyword),
+            (r"\s+", Whitespace),
+            (r"[^\s()]+", Text),
         ],
     }
 
