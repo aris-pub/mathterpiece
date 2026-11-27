@@ -29,7 +29,7 @@ This rule exists so that every position, length and angle in a world model has o
 ```{rule} coordinates
 In the coordinates of the scene, x grows to the right and y grows up. An angle is in degrees,
 counterclockwise from the direction in which x grows. A stroke width, the lengths of a dash, the
-length of the head at an end of a line ({numref}`line-heads`) and the size of a font are in screen
+length of the head at an end of a line and the size of a font are in screen
 pixels, so they keep their size on screen
 whatever a canvas shows. Every other length is in the units of the scene.
 ```
@@ -54,7 +54,8 @@ signature is ({ref}`signatures`):
 ```
 
 The runtime draws the scene over its `background` in each canvas. A `background` of `none`, the
-default, is transparent. The frame of the scene sets how its coordinates are drawn ({numref}`frames`).
+default, is transparent. The frame of the scene, its `shift-x`, `shift-y`, `rotate`, `scale-x` and `scale-y`, sets how its
+coordinates are drawn.
 A variable declared in the body is not an attribute of the scene: it is read by its name, as a
 variable declared at the top level is ({numref}`scopes`).
 ````
@@ -83,14 +84,32 @@ shape declared in the body of a motif is not a member of anything: it is an attr
 declared with the motif ({numref}`motif-shapes`). The shape of a `(clip …)` is not a member either
 ({numref}`clips`).
 
+## Fonts
+
+This rule exists to fix the parts of a font and their defaults, which a text uses for each part that its font does not give.
+
+````{rule} font-parts
+A font is a record ({numref}`records`) with this signature:
+
+```mtp-sig
+(font NAME
+  (family:string|none none)
+  (style:(string (one-of 'normal' 'italic' 'oblique')) 'normal')
+  (weight:(real (>= 1) (<= 1000)) 400)
+  (size:real 16)
+  (doc:string ''))
+```
+
+A `family` of `none` is the font family of the page where the runtime draws the text, and `size` is
+in screen pixels.
+````
+
 ## Shapes
 
 This rule exists to fix the named arguments that the shapes of every kind share, since each one is an attribute of the shape.
 
 ````{rule} shape-arguments
-Each named argument in the signatures of {numref}`shape-signatures` is an attribute of the shape, of
-the type and with the default that the signature gives. `(like shape)` stands for these arguments,
-which every one of those signatures holds:
+`(like shape)` stands for these named arguments, which the signature of every shape holds:
 
 ```mtp-sig
 (shape NAME
@@ -110,7 +129,8 @@ which every one of those signatures holds:
 This rule exists to fix what each attribute of `(like shape)` does to how the runtime draws the shape.
 
 ```{rule} paint-attributes
-The attributes of `(like shape)` other than the frame ({numref}`frames`) mean the following.
+The attributes of `(like shape)` other than `shift-x`, `shift-y`, `rotate`, `scale-x` and `scale-y`
+mean the following.
 
 | Attribute | What it is |
 |---|---|
@@ -119,7 +139,7 @@ The attributes of `(like shape)` other than the frame ({numref}`frames`) mean th
 | `opacity`, `fill-opacity`, `stroke-opacity` | how opaque the shape, its fill and its stroke are. The alpha of a color, `fill-opacity` and `stroke-opacity` multiply, and `opacity` fades the drawn shape as a whole, so a fill does not show through a stroke that overlaps it |
 | `dash`, `dash-offset` | the lengths of the dashes and the gaps between them in turn, and the distance by which that pattern is shifted along the stroke. `(dash L O)` sets `dash` to L and `dash-offset` to O, or to 0 when O is left out. With no `dash`, `dash` is `{}` and the stroke is solid |
 | `line-cap`, `line-join` | the shape of the ends of a stroke, and the shape of its corners |
-| `drawn` | the share of the outline that is drawn ({numref}`drawn-outlines`) |
+| `drawn` | the share of the outline that is drawn |
 | `pointer-events` | with `false`, the pointer passes through the shape to what is drawn under it, so the pointer triggers no listener on the shape |
 ```
 
@@ -129,7 +149,8 @@ gaps of 2 pixels, and `(move c.dash-offset (to 12) (duration 1))` moves the dash
 This rule exists to fix the named arguments of each kind of shape, their types and their defaults.
 
 ````{rule} shape-signatures
-These are the signatures of the shapes that are not collections:
+These are the signatures of the shapes that are not groups. Each named argument in them is an
+attribute of the shape, of the type and with the default that the signature gives:
 
 ```mtp-sig
 (circle NAME (like shape) (x:real 0) (y:real 0) (r:(real (>= 0)) 1) (doc:string ''))
@@ -304,13 +325,10 @@ This rule exists to fix the named arguments of the forms that declare a group.
   (gap:real 0) (align:(string (one-of 'left' 'middle' 'right')) 'middle'))
 ```
 
-The parts of the frame of a collection are attributes of it, and its other named arguments are
-not. `(pointer-events B)` means the same as `(pointer-events B)` in its `(defaults …)`, and a
-collection that gives both is a compile error. `defaults`, `clip`, `fixed-size`, `gap` and `align`
-are defined in {numref}`collection-defaults`, {numref}`clips`, {numref}`fixed-size-groups` and
-{numref}`rows-and-columns`. Apart from its frame, its `name` and its `members` ({numref}`members`), a
-collection has no attribute of its own, and every other attribute read through it belongs to its
-members ({numref}`spreads`).
+The parts of the frame of a group are attributes of it, and its other named arguments are not.
+`(pointer-events B)` means the same as `(pointer-events B)` in its `(defaults …)`, and a group that
+gives both is a compile error. Apart from its frame, its `name` and its `members` ({numref}`members`),
+a group has no attribute of its own.
 ````
 
 :::{admonition} Code differs
@@ -355,7 +373,7 @@ fill and the alignment of each text in `labels`, and the stroke of each other sh
 stroke of a text, since a stroke would outline its letters. A collection never sets a position or a
 frame on its members: it moves them with its own frame.
 
-## Defaults on a collection and on a shape declared with a motif
+## Defaults on a group and on a shape declared with a motif
 
 This rule exists so that a group can set an attribute once for all its members.
 
@@ -546,23 +564,3 @@ The compiler rejects a formula string that is not a literal, even when it is kno
 `(int n 2 (const)) (formula f f'x^{n}')` is the error "a formula's LaTeX is known when compiling".
 Bead mtp-33l1 makes the compiler follow the rule.
 :::
-
-## Fonts
-
-This rule exists to fix the parts of a font and their defaults, which a text uses for each part that its font does not give.
-
-````{rule} font-parts
-A font is a record ({numref}`records`) with this signature:
-
-```mtp-sig
-(font NAME
-  (family:string|none none)
-  (style:(string (one-of 'normal' 'italic' 'oblique')) 'normal')
-  (weight:(real (>= 1) (<= 1000)) 400)
-  (size:real 16)
-  (doc:string ''))
-```
-
-A `family` of `none` is the font family of the page where the runtime draws the text, and `size` is
-in screen pixels.
-````
