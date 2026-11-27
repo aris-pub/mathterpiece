@@ -1,5 +1,5 @@
 """The .mtpc writer: the world model as JSON, in the form docs/mtpc.md gives and
-docs/mtpc.schema.json checks. The same model always gives the same bytes."""
+docs/spec/mtpc.schema.json checks. The same model always gives the same bytes."""
 
 import json
 from fractions import Fraction

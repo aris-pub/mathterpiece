@@ -1,5 +1,5 @@
 // The .mtpc the compiler writes (docs/spec/compiled-format.md, checked against
-// docs/mtpc.schema.json). Expressions are arrays: their operation, their type, then their parts.
+// docs/spec/mtpc.schema.json). Expressions are arrays: their operation, their type, then their parts.
 
 export type Type =
   | string
