@@ -18,23 +18,30 @@ This rule exists to fix the arguments of each listener on a view, so that the co
   (priority:(int (>= 1) (<= 1000)) 1000)
   (doc:string '')
   CONDITIONS:bool*)
+
 (on-ready MOVEMENT:movement
   (active:bool true)
   (priority:(int (>= 1) (<= 1000)) 300)
   (doc:string '')
   CONDITIONS:bool*)
+
 (on-live MOVEMENT:movement
   (active:bool true)
   (priority:(int (>= 1) (<= 1000)) 500)
   (doc:string '')
   CONDITIONS:bool*)
+
 (on-quiet MOVEMENT:movement
   (active:bool true)
   (priority:(int (>= 1) (<= 1000)) 500)
   (doc:string '')
   CONDITIONS:bool*)
-(on-show SOURCE:shape MOVEMENT:movement (doc:string ''))
-(on-hide SOURCE:shape MOVEMENT:movement (doc:string ''))
+
+(on-show SOURCE:shape MOVEMENT:movement
+  (doc:string ''))
+
+(on-hide SOURCE:shape MOVEMENT:movement
+  (doc:string ''))
 ```
 
 `MOVEMENT` is the movement that the runtime executes when the listener is triggered. `SOURCE` is a

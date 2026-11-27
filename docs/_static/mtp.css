@@ -232,6 +232,7 @@ html[data-theme] div.highlight-mtp-sig .highlight :is(.n, .p, .s, .w) { color: v
 html[data-theme] div.highlight-mtp-sig .highlight .k { color: var(--pst-color-text-base); font-weight: 600; }
 html[data-theme] div.highlight-mtp-sig .highlight .nb { color: var(--pst-color-text-muted); }
 html[data-theme] div.highlight-mtp-sig .highlight .l { color: var(--mtp-sig-default); }
+html[data-theme] div.highlight-mtp-sig .highlight .c { color: var(--pst-color-text-muted); font-style: normal; }
 
 /* Tables (the author, 2026-11-23): no stripes, a thin line between rows, column headings in small
    gray capitals, and the code in the first column in bold, in the text's color, with no box. */

@@ -51,25 +51,41 @@ This rule exists to fix the arguments of each jumper, so that the compiler can c
 ````{rule} jumper-signatures
 ```mtp-sig
 (slider NAME TARGET:real
-  (from:real) (to:real)
-  (step:real none) (ticks:real none)
+  (from:real)
+  (to:real)
+  (step:real none)
+  (ticks:real none)
   (like control))
+
 (range-slider NAME LOW:real HIGH:real
-  (from:real) (to:real)
-  (step:real none) (ticks:real none)
+  (from:real)
+  (to:real)
+  (step:real none)
+  (ticks:real none)
   (like control))
+
 (dial NAME TARGET:mod
-  (step:real none) (ticks:real none)
+  (step:real none)
+  (ticks:real none)
   (like control))
+
 (number-field NAME TARGET:real
-  (step:(real (> 0)) 1) (buttons:bool true) (typing:bool true)
+  (step:(real (> 0)) 1)
+  (buttons:bool true)
+  (typing:bool true)
   (like control))
-(text-field NAME TARGET:string (like control))
-(toggle NAME TARGET:bool (like control))
+
+(text-field NAME TARGET:string
+  (like control))
+
+(toggle NAME TARGET:bool
+  (like control))
+
 (select NAME TARGET
   (kind:(string (one-of 'menu' 'buttons' 'radio')) 'menu')
   (like control)
   OPTIONS:opt+)
+
 (multi-select NAME TARGET
   (kind:(string (one-of 'menu' 'buttons' 'checkbox')) 'menu')
   (like control)
@@ -188,12 +204,17 @@ This rule exists to fix the arguments of each mover, so that the compiler can ch
 
 ````{rule} mover-signatures
 ```mtp-sig
-(button NAME EFFECT:movement (like control))
+(button NAME EFFECT:movement
+  (like control))
+
 (play NAME EFFECT:movement
-  (buttons:bool false) (rest:(real (>= 0)) 0)
+  (buttons:bool false)
+  (rest:(real (>= 0)) 0)
   (labels LABELS:string*)
   (like control))
-(stepper NAME EFFECT:movement (like control))
+
+(stepper NAME EFFECT:movement
+  (like control))
 ```
 
 `EFFECT` is required. A press of a button plays its effect from the start. A play plays its effect
