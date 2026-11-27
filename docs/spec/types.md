@@ -471,6 +471,26 @@ The result type of `(func[R] N PARAMS BODY)` is R, and of `(func N PARAMS BODY)`
 function that calls itself must declare its result type.
 ```
 
+## The type that each expression must have
+
+This rule exists so that every compiler checks each expression against the same type.
+
+```{rule} expected-types
+The expected type of an expression depends on where it is written in the form around it:
+
+| The expression | Its expected type |
+|---|---|
+| an argument of a form, positional or named | the type that the signature of the form's head gives that argument ({ref}`signatures`) |
+| the starting value `V` of a variable `(T N V …)` | `T` |
+| an argument of a call of a function | the type of the parameter that the argument is matched to |
+| the body of a function declared with a result type `R` | `R` |
+| the test `C` of `(if C A B)` | `bool` |
+| an item of a list `{X…}` whose expected type is `list[T]` | `T` |
+| a value that a writer writes | the type of its target, without its conditions ({numref}`written-values`) |
+
+Every other expression has no expected type.
+```
+
 ## The type of each expression
 
 This rule exists so that every compiler gives each expression the same type.
