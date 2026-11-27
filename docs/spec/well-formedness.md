@@ -227,6 +227,14 @@ evaluates to `none` by {numref}`expressions-that-give-none`.
 
 So with `(real k 1)`, `(/ 1 k)` is a `real|none`, and with `(real k 1 (>= 1))`, a `real`.
 
+```{mtp-example}
+; k is at least 1, so the prover proves that 1/k is never none
+(real k 2 (>= 1) (<= 5))
+(scene s (circle c (r (/ 1 k)) (fill #'teal')))
+(canvas v (x -1.2) (y -1.2) (width 2.4) (height 2.4) s)
+(slider size (animation (move k (from 1) (to 5) (duration 0))) (label 'k'))
+```
+
 This rule exists because an argument that is not a number has no range, so the prover decides whether such an expression may give `none` from the length of a list or the members of a group.
 
 ```{rule} none-without-ranges
@@ -245,40 +253,40 @@ So with `(int f 0 (>= 0) (<= 3))`, `xs[f]` on a bound list of four items is neve
 `(type side string (one-of 'left' 'right'))` and a group `arms` whose members are named `left` and
 `right`, `arms[s]` is never `none` for a `side` `s`.
 
-This rule exists to specify when the prover counts a condition as proved, and what the compiler does when it is not.
+This rule exists to specify when the prover counts a value as meeting a condition.
 
 ```{rule} constraint-proof
-A value written where the expected type holds a condition C meets C when one of these holds:
+The prover counts a value as meeting a condition C of the type expected where the value is written
+when one of these holds:
 
 - The value is known in the prove step and meets C.
 - The type of the value is a subtype of the expected type with C as its only condition ({numref}`subtypes`).
-- C is a comparison, and the range of the value lies inside it: its lower end is at least c for
-  `(>= c)` and above c for `(> c)`, and its upper end is at most c for `(<= c)` and below c for
-  `(< c)`.
+- C is a comparison `(OP c)`, with OP one of `>=`, `>`, `<=` and `<` and c a number, and the range of
+  the value ({numref}`ranges`) lies inside it: its lower end is at least c for `(>= c)` and above c
+  for `(> c)`, and its upper end is at most c for `(<= c)` and below c for `(< c)`.
+```
 
-When a value does not meet C:
+So with `(real k 2 (>= 1) (<= 5))`, `(+ k 1)` meets `(> 0)`, since its range is 2 to 6.
+
+This rule exists to specify what the compiler does with a value that the prover cannot count as meeting a condition, which depends on where the value is written.
+
+```{rule} unproved-conditions
+When the prover cannot count a value as meeting a condition C ({numref}`constraint-proof`), the
+compiler does the following:
 
 | The value | Then |
 |---|---|
 | a value known in the prove step | a compile error |
-| the value of a bound container | {numref}`prover-finds-ranges` |
+| the value of a bound container | the type of the container includes `none`, and the .mtpc holds a `check` for it ({numref}`prover-finds-ranges`) |
 | an argument of a call, or of `(M …)` or `(A …)` for a motif `M` or an animation `A` | a compile error |
-| the body of a function declared with a result type R | when R includes `none`, a call evaluates to `none` where the value of the body breaks C, and the write step writes the `check` for it. Otherwise a compile error |
-| an item of a `(list-of …)` whose item type is expected | a compile error |
-| a value that a writer writes | not proved: {numref}`written-values` |
+| the body of a function declared with a result type R | when R includes `none`, a call evaluates to `none` where the value of the body breaks C, and the .mtpc holds a `check` for it. Otherwise a compile error |
+| an item of a list `{X…}`, where the expected type is a list type and C is a condition of its item type | a compile error |
+| a value that a writer writes | nothing: each write enforces C while drawing ({numref}`written-values`) |
 ```
 
 So `(real k 5 (<= 3))` is a compile error. With `(real a 1)` and
 `(func g (((real (>= 0)) x)) (* 2 x))`, `(g a)` is a compile error, and `(g (abs a))` is not. With
 `(func[(real|none (>= 0))] h ((real x)) x)`, `(h a)` is `none` while `a` is below 0.
-
-```{mtp-example}
-; k is at least 1, so the prover proves that 1/k is never none
-(real k 2 (>= 1) (<= 5))
-(scene s (circle c (r (/ 1 k)) (fill #'teal')))
-(canvas v (x -1.2) (y -1.2) (width 2.4) (height 2.4) s)
-(slider size (animation (move k (from 1) (to 5) (duration 0))) (label 'k'))
-```
 
 ### Narrowing in an `if`
 
