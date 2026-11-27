@@ -164,31 +164,23 @@ arguments:
 ```mtp-sig
 ; the shapes that take x and y
 
-(circle NAME
-  (like shape)
-  (like positioned)
+(circle NAME (like shape) (like positioned)
   (r:(real (>= 0)) 1)
   (doc:string ''))
 
-(rect NAME
-  (like shape)
-  (like positioned)
+(rect NAME (like shape) (like positioned)
   (width:real 1)
   (height:real 1)
   (rx:real 0)
   (ry:real 0)
   (doc:string ''))
 
-(ellipse NAME
-  (like shape)
-  (like positioned)
+(ellipse NAME (like shape) (like positioned)
   (rx:real 1)
   (ry:real 1)
   (doc:string ''))
 
-(arc NAME
-  (like shape)
-  (like positioned)
+(arc NAME (like shape) (like positioned)
   (r:(real (>= 0)) 1)
   (from:real 0)
   (to:real 360)
@@ -197,18 +189,14 @@ arguments:
   (head-size:(real (>= 0)) 1)
   (doc:string ''))
 
-(ring NAME
-  (like shape)
-  (like positioned)
+(ring NAME (like shape) (like positioned)
   (r:(real (>= 0)) 1)
   (width:(real (>= 0)) 0.5)
   (from:real 0)
   (to:real 360)
   (doc:string ''))
 
-(text NAME VALUE:string
-  (like shape)
-  (like positioned)
+(text NAME VALUE:string (like shape) (like positioned)
   (halign:(string (one-of 'start' 'middle' 'end')) 'start')
   (valign:(string (one-of 'top' 'middle' 'baseline' 'bottom')) 'baseline')
   (face:font (font_))
@@ -216,8 +204,7 @@ arguments:
 
 ; the shapes that take points
 
-(line NAME
-  (like shape)
+(line NAME (like shape)
   (from:point [0 0])
   (to:point [1 0])
   (head-start:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
@@ -225,28 +212,24 @@ arguments:
   (head-size:(real (>= 0)) 1)
   (doc:string ''))
 
-(triangle NAME
-  (like shape)
+(triangle NAME (like shape)
   (a:point [0 0])
   (b:point [1 0])
   (c:point [0 1])
   (doc:string ''))
 
-(polyline NAME
-  (like shape)
+(polyline NAME (like shape)
   (points:list[point] {})
   (head-start:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
   (head-end:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
   (head-size:(real (>= 0)) 1)
   (doc:string ''))
 
-(polygon NAME
-  (like shape)
+(polygon NAME (like shape)
   (points:list[point] {})
   (doc:string ''))
 
-(bezier NAME
-  (like shape)
+(bezier NAME (like shape)
   (from:point [0 0])
   (to:point [1 0])
   (controls:list[point] {[0.5 1]})
@@ -393,13 +376,11 @@ This rule exists to fix the named arguments of the forms that declare a group.
   (doc:string '')
   MEMBERS:(shape|exists-when|let|foreach)*)
 
-(row NAME
-  (like group)
+(row NAME (like group)
   (gap:real 0)
   (align:(string (one-of 'top' 'middle' 'bottom')) 'middle'))
 
-(column NAME
-  (like group)
+(column NAME (like group)
   (gap:real 0)
   (align:(string (one-of 'left' 'middle' 'right')) 'middle'))
 ```
