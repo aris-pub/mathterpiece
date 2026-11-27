@@ -296,7 +296,11 @@ This rule exists so that the prover accepts a branch of an `if` that is safe onl
 A branch of an `if` is checked only for the values for which it runs. In `(if (OP N c) A B)`, where
 N is a name whose range the prover works out, c is a number known in the prove step, and OP is one
 of `=`, `!=`, `<`, `<=`, `>` and `>=`, the range of N in A is the part of its range for which the
-comparison holds, and in B the part for which it fails. With lo and hi the ends of the range of N:
+comparison holds, and in B the part for which it fails. `(OP c N)` narrows as the comparison with N
+first that holds for the same values: `(< c N)` as `(> N c)`, and `(= c N)` as `(= N c)`. `cond`,
+`when`, `and` and `or` narrow through their {term}`rewrites <rewrite>` into `if`
+({numref}`sugar-rewrites`). No other condition narrows a range. With lo and hi the ends of the range
+of N:
 
 - For an int N, the part in A is from the smallest to the largest of the ints from lo to hi for
   which the comparison holds, and the part in B is the same for the ints for which it fails. So
@@ -314,13 +318,15 @@ comparison holds, and in B the part for which it fails. With lo and hi the ends 
 - When a part holds no int, for an int N, or when its lower end is above its upper end, or when lo
   and hi are both c in the part in which N is not c, the branch never runs, and the prover checks
   nothing in it.
+```
 
+This rule exists to specify which reads of N get the narrowed range.
+
+```{rule} narrowed-reads
 The range of N changes only for the reads of N in A and in B that read the same declaration or
 binding as the N of the condition. A name whose value is computed from N outside the `if`, such as a
 `let` name, keeps its range. In an `if` inside A or B, the range of N is the part set by the outer
-`if`. `(OP c N)` narrows as the comparison with N first that holds for the same values: `(< c N)`
-as `(> N c)`, and `(= c N)` as `(= N c)`. `cond`, `when`, `and` and `or` narrow through their
-{term}`rewrites <rewrite>` into `if` ({numref}`sugar-rewrites`). No other condition narrows a range.
+`if`.
 ```
 
 In the source below, the body of the `foreach` is checked for `k` from 0 to 59
