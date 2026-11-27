@@ -218,21 +218,31 @@ code.mtp-inline.highlight { background-color: var(--pst-color-surface); }
 .mtp-diagram figcaption > p { display: inline; margin: 0; }
 .mtp-diagram figcaption .caption-number { font-weight: 600; font-style: normal; }
 
-/* A signature (```mtp-sig, the author, 2026-11-23): no box, one argument or group per line, the
-   head in bold, each type in gray and each default in brown. */
-html { --mtp-sig-default: #9a5b00; }
-html[data-theme="dark"] { --mtp-sig-default: #e0a456; }
+/* A signature (```mtp-sig): no box, one argument per line, in the colors of editors/mtp-mode.el,
+   which are Tango's (the author, 2026-11-27). The dark values are Tango's lighter shades. */
+html {
+  --mtp-sig-head: #204a87; --mtp-sig-name: #b35000; --mtp-sig-arg: #346604; --mtp-sig-type: #204a87;
+  --mtp-sig-number: #ce5c00; --mtp-sig-string: #5c3566; --mtp-sig-comment: #5f615c;
+}
+html[data-theme="dark"] {
+  --mtp-sig-head: #729fcf; --mtp-sig-name: #fcaf3e; --mtp-sig-arg: #8ae234; --mtp-sig-type: #729fcf;
+  --mtp-sig-number: #e9b96e; --mtp-sig-string: #ad7fa8; --mtp-sig-comment: #babdb6;
+}
 div.highlight-mtp-sig pre {
   background: none; border: 0; box-shadow: none; padding: 0.25rem 0; line-height: 1.6;
 }
 div.highlight-mtp-sig .highlight { background: none; }
 /* The theme colors code tokens with selectors such as html[data-theme=light] .highlight .k, so
    these need html[data-theme] to win. */
-html[data-theme] div.highlight-mtp-sig .highlight :is(.n, .p, .s, .w) { color: var(--pst-color-text-base); }
-html[data-theme] div.highlight-mtp-sig .highlight .k { color: var(--pst-color-text-base); font-weight: 600; }
-html[data-theme] div.highlight-mtp-sig .highlight .nb { color: var(--pst-color-text-muted); }
-html[data-theme] div.highlight-mtp-sig .highlight .l { color: var(--mtp-sig-default); }
-html[data-theme] div.highlight-mtp-sig .highlight .c { color: var(--pst-color-text-muted); font-style: normal; }
+html[data-theme] div.highlight-mtp-sig .highlight :is(.p, .w, .o, .x) { color: var(--pst-color-text-base); }
+html[data-theme] div.highlight-mtp-sig .highlight .k { color: var(--mtp-sig-head); font-weight: 700; }
+html[data-theme] div.highlight-mtp-sig .highlight .nv { color: var(--mtp-sig-name); }
+html[data-theme] div.highlight-mtp-sig .highlight .na { color: var(--mtp-sig-arg); }
+html[data-theme] div.highlight-mtp-sig .highlight .nb { color: var(--mtp-sig-type); }
+html[data-theme] div.highlight-mtp-sig .highlight .o { color: var(--mtp-sig-type); }
+html[data-theme] div.highlight-mtp-sig .highlight :is(.m, .mi, .mf) { color: var(--mtp-sig-number); }
+html[data-theme] div.highlight-mtp-sig .highlight :is(.s, .kc) { color: var(--mtp-sig-string); }
+html[data-theme] div.highlight-mtp-sig .highlight .c { color: var(--mtp-sig-comment); font-style: normal; }
 
 /* Tables (the author, 2026-11-23): no stripes, a thin line between rows, column headings in small
    gray capitals, and the code in the first column in bold, in the text's color, with no box. */
