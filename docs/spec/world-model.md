@@ -42,7 +42,8 @@ the screen in every canvas, however far the reader zooms in.
 This rule exists to define the scene, which holds every shape that a canvas can show.
 
 ````{rule} the-scene
-The scene is the object that `(scene N …)` declares, with this signature ({ref}`signatures`):
+The scene is the object that `(scene N …)` declares, and a source declares at most one scene. Its
+signature is ({ref}`signatures`):
 
 ```mtp-sig
 (scene NAME
@@ -52,8 +53,8 @@ The scene is the object that `(scene N …)` declares, with this signature ({ref
   ITEMS:(shape|variable|exists-when|let|foreach)*)
 ```
 
-The runtime draws the scene over its `background` in each canvas, and over nothing when the
-background is `none`. The frame of the scene sets how its coordinates are drawn ({numref}`frames`).
+The runtime draws the scene over its `background` in each canvas. A `background` of `none`, the
+default, is transparent. The frame of the scene sets how its coordinates are drawn ({numref}`frames`).
 A variable declared in the body is not an attribute of the scene: it is read by its name, as a
 variable declared at the top level is ({numref}`scopes`).
 ````

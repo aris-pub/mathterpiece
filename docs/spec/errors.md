@@ -47,7 +47,6 @@ no message in this spec yet.
 | {numref}`named-arguments-once` | prove | a named argument is given twice in one form | "'A' is given twice" |
 | {numref}`docstrings` | prove | a {term}`docstring` is an interpolated string | "a doc is plain text, known when compiling: doc@'text'" |
 | {numref}`contexts` | prove | the body of a form holds an item that its head does not allow, such as a canvas in a scene | "a canvas is declared only at the top level" |
-| {numref}`contexts` | prove | the top level holds two scenes | |
 | {numref}`contexts` | prove | the body of a canvas holds nothing that evaluates to a shape, the scene, `none` or a list of shapes | |
 | {numref}`contexts` | prove | a movement group holds `step` | "use (labels …) and (in-order …)" |
 | {numref}`contexts` | prove | a control holds `autoplay` | "use a canvas's (on-ready …)" |
@@ -88,6 +87,7 @@ no message in this spec yet.
 
 | Rule | Step | The source is rejected when | Message |
 |---|---|---|---|
+| {numref}`the-scene` | prove | the source declares two scenes | "a file has exactly one scene" |
 | {numref}`collection-defaults` | prove | an `A` of a `(defaults …)` on a collection is not an attribute that a collection may set on its members | |
 | {numref}`formula-terms` | prove | the string of a formula is not known when compiling | "a formula's LaTeX is known when compiling" |
 
