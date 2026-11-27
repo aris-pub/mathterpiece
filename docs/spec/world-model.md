@@ -65,14 +65,14 @@ still written, read and written to in the coordinates of the scene.
 This rule exists to define the tree of the scene and its collections, which sets what each collection holds and the order in which the runtime draws shapes.
 
 ```{rule} members
-The members of the scene and of a group are the shapes declared in its {term}`body`,
-in the order of the source after the expand step ({numref}`compile-steps`). So every shape of the
-scene that is not declared in the body of a motif or in a `(clip …)` is a member of exactly one of
-them, and they form a tree whose root is the scene. A shape is in
-a collection when it is a member of the collection, or in a collection that is a member of it. The
-attribute `members` of the scene and of each collection is the {term}`list` of its members, and a
-member may also be read by its position or its name ({numref}`dot-name-part`). The runtime draws the
-members of each in this order, each member over the members before it.
+The members of the scene and of a group are the shapes declared in its {term}`body`, in the order of
+the source after the expand step ({numref}`compile-steps`). A group is a shape, so every shape of the
+scene that is not declared in the body of a motif or in a `(clip …)` is a member of exactly one group
+or of the scene, and they form a tree whose root is the scene. A shape is in a group when it is a
+member of that group or of a group in it, at any depth: in `(group g (group h (circle c)))`, `c` is
+in `h` and in `g`. The attribute `members` of the scene and of each group is the {term}`list` of its
+members, and a member may also be read by its position or its name ({numref}`dot-name-part`). The
+runtime draws the members of each in this order, each member over the members before it.
 ```
 
 So in `(scene s (group g (circle a) (circle b)) (circle c))`, `s.members` is `{g c}` and
