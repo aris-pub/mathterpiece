@@ -35,9 +35,18 @@ heads
 :maxdepth: 2
 
 data-model
+world-model
 scope
 imports
 types
+```
+
+```{toctree}
+:caption: Meaning of expressions
+:numbered:
+:maxdepth: 2
+
+evaluation
 binding-time
 well-formedness
 ```
@@ -47,8 +56,6 @@ well-formedness
 :numbered:
 :maxdepth: 2
 
-world-model
-evaluation
 reactivity
 time
 concurrency
