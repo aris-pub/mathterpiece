@@ -1,4 +1,4 @@
-"""The schema itself (docs/mtpc.schema.json): valid, and it accepts what docs/mtpc.md allows."""
+"""The schema itself (docs/spec/mtpc.schema.json): valid, and it accepts what docs/mtpc.md allows."""
 
 from jsonschema import Draft202012Validator
 from mtpc_check import SCHEMA, errors

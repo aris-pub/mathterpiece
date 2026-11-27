@@ -1,4 +1,4 @@
-// The runtime's check of a .mtpc against docs/mtpc.schema.json (src/schema.ts) handles only the
+// The runtime's check of a .mtpc against docs/spec/mtpc.schema.json (src/schema.ts) handles only the
 // keywords that the schema uses. These tests check that it gives the same answers as Ajv, a full
 // validator of JSON Schema 2020-12, for every .mtpc that `just web-examples` compiles, and for many
 // files made from them by changing one value each.
@@ -8,7 +8,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import { describe, expect, it } from "vitest";
 import { schemaProblem } from "../src/schema.ts";
 
-const SCHEMA = JSON.parse(readFileSync(resolve(import.meta.dirname, "../../docs/mtpc.schema.json"), "utf8")) as object;
+const SCHEMA = JSON.parse(readFileSync(resolve(import.meta.dirname, "../../docs/spec/mtpc.schema.json"), "utf8")) as object;
 const ajv = new Ajv2020({ strict: false }).compile(SCHEMA);
 
 const raw = import.meta.glob("./data/**/*.mtpc", { query: "?raw", import: "default", eager: true });

@@ -1,4 +1,4 @@
-// The check of a .mtpc against the schema of its version, docs/mtpc.schema.json, before the
+// The check of a .mtpc against the schema of its version, docs/spec/mtpc.schema.json, before the
 // runtime runs any part of it (docs/spec/compiler-runtime.md, rule runtime-loads-mtpc).
 //
 // The build puts the schema itself in the runtime (vite.config.ts), so a change to the schema

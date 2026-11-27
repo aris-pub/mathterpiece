@@ -4,7 +4,7 @@ import { playwright } from "@vitest/browser-playwright";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 
-const SCHEMA = fileURLToPath(new URL("../docs/mtpc.schema.json", import.meta.url));
+const SCHEMA = fileURLToPath(new URL("../docs/spec/mtpc.schema.json", import.meta.url));
 const SCHEMA_MODULE = "virtual:mtpc-schema";
 
 // The keywords that the runtime's check of a .mtpc handles (src/schema.ts), and what each one holds:
@@ -65,7 +65,7 @@ function unknownKeyword(schema: unknown, at: string): string | null {
   return null;
 }
 
-// The runtime checks each .mtpc against docs/mtpc.schema.json, which this puts in the runtime, so a
+// The runtime checks each .mtpc against docs/spec/mtpc.schema.json, which this puts in the runtime, so a
 // change to the schema needs no edit in the runtime. The build fails when the schema uses a keyword
 // that the check does not handle. The schema goes in as a string for JSON.parse, so that the build
 // does not spread it over thousands of lines.

@@ -42,7 +42,7 @@ def _bundle(file: str) -> str:
     if not sources:
         raise BuildError(f"the runtime's source is not in {WEB / 'src'}")
     # The runtime checks each .mtpc with a validator that its build writes from the schema.
-    sources += [p for p in [WEB.parent / "docs" / "mtpc.schema.json"] if p.is_file()]
+    sources += [p for p in [WEB.parent / "docs" / "spec" / "mtpc.schema.json"] if p.is_file()]
     newest = max(p.stat().st_mtime for p in sources)
     if any(not b.exists() or b.stat().st_mtime < newest for b in built):
         if shutil.which("pnpm") is None:

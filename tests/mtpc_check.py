@@ -1,11 +1,11 @@
-"""Checks an .mtpc document against docs/mtpc.schema.json."""
+"""Checks an .mtpc document against docs/spec/mtpc.schema.json."""
 
 import json
 from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
-SCHEMA = json.loads((Path(__file__).parent.parent / "docs" / "mtpc.schema.json").read_text())
+SCHEMA = json.loads((Path(__file__).parent.parent / "docs" / "spec" / "mtpc.schema.json").read_text())
 VALIDATOR = Draft202012Validator(SCHEMA)
 
 
