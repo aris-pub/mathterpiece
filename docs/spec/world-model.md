@@ -76,7 +76,10 @@ runtime draws the members of each in this order, each member over the members be
 ```
 
 So in `(scene s (group g (circle a) (circle b)) (circle c))`, `s.members` is `{g c}` and
-`g.members` is `{a b}`, `a` is in `g`, and the runtime draws `a`, then `b`, then `c` over both. A
+`g.members` is `{a b}`, and the runtime draws `a`, then `b`, then `c` over both. Being in a group
+and being a member of it differ: in `(group g (group h (circle c)))`, `c` is in `g` but is not a
+member of `g`, and `g.members` is `{h}`. Rules that say "in a group" reach every depth, and rules
+that say "member" reach only the shapes declared directly in the body. A
 shape declared in the body of a motif is not a member of anything: it is an attribute of the shape
 declared with the motif ({numref}`motif-shapes`). The shape of a `(clip …)` is not a member either
 ({numref}`clips`).
