@@ -158,7 +158,7 @@ range input whose name is `track`, with no `thumb` (web/src/elements.ts:1236-133
 
 ## CSS custom properties
 
-This rule exists to name the CSS custom properties through which a page sets the colors of the controls and of the variables of a world model.
+This rule exists to name the CSS custom properties through which a page sets the colors of the controls and the fonts of a world model.
 
 ```{rule} page-custom-properties
 A page may set these CSS custom properties, and the runtime draws each element with the values that
@@ -168,13 +168,19 @@ it inherits:
   rest, and while the reader presses it, holds it or gives it the focus from the keyboard, or while
   a play or a stepper plays. Where the page sets neither, both are the color `--primary-700`, or
   `--primary-600` for a toggle.
-- For each variable of type `color`, and each attribute of type `color` of a record, whose name
-  is N, `--mtp-N`. For each font whose name is N, `--mtp-N-family`, `--mtp-N-style` and
-  `--mtp-N-weight`. In N, each dot of a {term}`qualified name` is written `-`, and a name declared
-  in another file has the name of that file first. The runtime draws with the declared value where
-  the page sets none, and draws a color computed from such colors from the values that the page
-  sets.
+- For each font whose name is N, `--mtp-N-family`, `--mtp-N-style` and `--mtp-N-weight`. In N,
+  each dot of a {term}`qualified name` is written `-`, and a name declared in another file has the
+  name of that file first. The runtime draws with the declared value where the page sets none.
 ```
+
+A variable of type `color` is an ordinary variable, and the page sets no color of a world model.
+
+:::{admonition} Code differs
+:class: note
+The runtime also reads `--mtp-N` for each variable of type `color` and each attribute of type `color`
+of a record whose name is N, and draws with the value that the page sets. The author decided on
+2026-11-24 that the page sets no color variable.
+:::
 
 So with `(color ink #'navy')`, the CSS `mtp-canvas { --mtp-ink: crimson }` draws in crimson every
 shape whose fill is `ink`, and `ink` from the file `house.mtp` is `--mtp-house-ink`. An expression
