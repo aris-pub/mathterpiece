@@ -125,6 +125,6 @@ Primitives, objects and containers ({numref}`values-containers-types`).
 | functions | calls them |
 | records | holds their attributes |
 
-A {term}`collection` holds other objects, its members: a group, a row or a column holds shapes,
+A {term}`collection` holds other objects, its members: a group holds shapes,
 and a movement group holds movements. A motif is a type of shape that the illustrator declares, and an
 animation is a type of movement ({doc}`data-model`).

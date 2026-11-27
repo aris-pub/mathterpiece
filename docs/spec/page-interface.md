@@ -247,7 +247,7 @@ The runtime works the box out as follows.
 
 - **Which shapes count.** The shapes that count are the shapes to which the items of the canvas
   evaluate at the moment when the runtime works the box out, and that exist at that moment. A
-  group, a row or a column counts by its members that exist, cut to the box of its clip when it has
+  group counts by its members that exist, cut to the box of its clip when it has
   one. A shape with no paint, or a fully transparent one, still counts. A shape whose `on-show` or
   `on-hide` is playing at that moment counts with the attributes that it has in the scene, not as
   its stand-in.

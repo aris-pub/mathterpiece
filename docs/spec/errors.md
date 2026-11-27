@@ -57,7 +57,7 @@ no message in this spec yet.
 | {numref}`contexts` | prove | a body holds `dash-offset` | "write (dash {4 2} 1)" |
 | {numref}`contexts` | prove | a canvas holds `move` | "a canvas takes no (move …)" |
 | {numref}`contexts` | prove | the top level holds `term` | "a term is given inside its formula" |
-| {numref}`contexts` | prove | a group, a row, a column or a shape of a motif holds `pointer-events` | "write (defaults (pointer-events B))" |
+| {numref}`contexts` | prove | a group or a shape of a motif holds `pointer-events` | "write (defaults (pointer-events B))" |
 | {numref}`body-let-foreach` | prove | a `let` or a `foreach` is in a body that may not hold one, or a `foreach` holds a scene, a motif or a function | |
 
 ## Core and derived forms
@@ -72,7 +72,7 @@ no message in this spec yet.
 | {numref}`sugar-rewrites` | rewrite | the `P` of `(pos P)` holds a call of `rand`, `rand-int`, `choice` or `shuffled` | |
 | {numref}`sugar-rewrites` | rewrite | a `foreach` gives one name twice | "foreach gives 'N' twice" |
 | {numref}`sugar-rewrites` | rewrite | the `(defaults …)` of an `in-order` or an `at-once` gives a `lag` | |
-| {numref}`drag-group-shift` | prove | the target of an `on-drag` is the `pos`, the `x` or the `y` of a group, a row or a column | "a group has no x of its own: drag its shift, as (on-drag g g.shift)" |
+| {numref}`drag-group-shift` | prove | the target of an `on-drag` is the `pos`, the `x` or the `y` of a group | "a group has no x of its own: drag its shift, as (on-drag g g.shift)" |
 | {numref}`foreach-bounded-length` | prove | the prover proves no upper bound below the {term}`number limit` for the length of a `foreach` | "the count of a foreach is known when compiling, or has an upper bound, so the copies can be made then: declare it with (<= …)" |
 | {numref}`dot-name-part` | prove | a member of a group is named like an attribute of the group | |
 | {numref}`names-from-values` | prove | for some value of `S`, no object named by `S` is declared before `(name S)` | "unknown name 'N'" |

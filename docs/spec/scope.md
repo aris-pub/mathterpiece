@@ -71,8 +71,8 @@ This rule exists to determine, at each place in a source, which names may be use
 
 ```{rule} scopes
 A {term}`scope` is a part of a source in which some names may be used. The scope of a body is inside
-the scope of the form around it, and every scope is inside the file scope. A group, a row, a column
-and the scene make no scope of their own. The names that are declared in the items of a `let` or of
+the scope of the form around it, and every scope is inside the file scope. A group and the scene make
+no scope of their own. The names that are declared in the items of a `let` or of
 a `foreach` written in a body belong to the scope of that body: only the names that the `let` or the
 `foreach` binds belong to its own scope. These are the scopes of mtp, and the names of each one:
 
