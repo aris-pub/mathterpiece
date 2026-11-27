@@ -75,11 +75,9 @@ This rule exists to fix the arguments of each jumper, so that the compiler can c
   (typing:bool true)
   (like control))
 
-(text-field NAME TARGET:string
-  (like control))
+(text-field NAME TARGET:string (like control))
 
-(toggle NAME TARGET:bool
-  (like control))
+(toggle NAME TARGET:bool (like control))
 
 (select NAME TARGET
   (kind:(string (one-of 'menu' 'buttons' 'radio')) 'menu')
@@ -204,8 +202,7 @@ This rule exists to fix the arguments of each mover, so that the compiler can ch
 
 ````{rule} mover-signatures
 ```mtp-sig
-(button NAME EFFECT:movement
-  (like control))
+(button NAME EFFECT:movement (like control))
 
 (play NAME EFFECT:movement
   (buttons:bool false)
@@ -213,8 +210,7 @@ This rule exists to fix the arguments of each mover, so that the compiler can ch
   (labels LABELS:string*)
   (like control))
 
-(stepper NAME EFFECT:movement
-  (like control))
+(stepper NAME EFFECT:movement (like control))
 ```
 
 `EFFECT` is required. A press of a button plays its effect from the start. A play plays its effect

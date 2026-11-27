@@ -15,13 +15,11 @@ A signature gives a head with all of its arguments, and the type of each. The sp
 to describe heads. A signature is not mtp source:
 
 ```mtp-sig
-(circle NAME
-  (like shape)
+(circle NAME (like shape)
   (r:(real (>= 0)) 1)
   (doc:string ''))
 
-(text NAME VALUE:string
-  (like shape)
+(text NAME VALUE:string (like shape)
   (halign:(string (one-of 'start' 'middle' 'end')) 'start')
   (valign:(string (one-of 'top' 'middle' 'baseline' 'bottom')) 'baseline')
   (doc:string ''))
