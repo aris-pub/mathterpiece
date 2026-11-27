@@ -145,6 +145,10 @@ mean the following.
 
 So `(circle c (stroke #'black') (dash {4 2}))` has a black outline of dashes 4 pixels long with
 gaps of 2 pixels, and `(move c.dash-offset (to 12) (duration 1))` moves the dashes along the outline.
+A `fill` of `none` and a fill whose alpha is 0 look the same, but the pointer tells them apart. The
+inside of a shape with a `fill` of `none` is not part of the shape for the pointer, so a press there
+triggers no listener on the shape and reaches what is drawn under it. A fill whose alpha is 0 is part
+of the shape, so a press on the inside triggers the listeners on the shape.
 
 This rule exists to fix the named arguments of each kind of shape, their types and their defaults.
 
