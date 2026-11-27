@@ -29,7 +29,8 @@ the seeds of its random functions, and, for a read of a position, the frame of t
 This rule exists so that the place where a name is written determines whether it declares, gives a value or names a container.
 
 ```{rule} what-a-name-means
-A name means one of three things, by where it is written:
+A name means one of three things, by where it is written. `(name S)` and a name string `@'…'` mean
+what the name that they spell means where they are written ({numref}`names-from-values`).
 
 - Where a declaration gives its name, the name declares the variable, the object or the function.
 - In an expression, the name evaluates to what it refers to: the value that a variable holds, the
@@ -37,9 +38,6 @@ A name means one of three things, by where it is written:
   a name.
 - As the target of a writer or of a movement, the name means the container, not the value that it holds
   ({numref}`writable-targets`).
-
-`(name S)` and a name string `@'…'` mean what the name that they spell means where they are written
-({numref}`names-from-values`).
 ```
 
 So with `(real a 1)` and `(circle c (r a))`, `a` in `(r a)` evaluates to 1, `c` in `c.r` evaluates
@@ -130,7 +128,8 @@ This rule exists to list where an expression has no value, so that the compiler 
 
 ```{rule} expressions-that-give-none
 Besides an argument that is `none` ({numref}`none-propagates`), an expression results in `none` at
-these arguments, when folded and while drawing.
+these arguments, when folded and while drawing. At every other argument, an expression does not
+result in `none`.
 
 | Expression | Results in `none` at |
 |---|---|
@@ -152,8 +151,6 @@ these arguments, when folded and while drawing.
 | `xs[i]` | a position outside -n to n - 1, on a list of n items |
 | `g[k]` | a member that the group does not have |
 | a bound variable or attribute with a {term}`condition` | a value that breaks the condition ({doc}`types`) |
-
-At every other argument, an expression does not result in `none`.
 ```
 
 :::{admonition} Code differs
@@ -223,7 +220,8 @@ the type of each such expression includes `none` ({numref}`may-give-none`).
 This rule exists so that the runtime never stops on a missing value: `none` passes through to where it is handled.
 
 ```{rule} none-propagates
-An expression with an argument that is `none` gives `none`, at both times, except:
+An attribute of `none` is `none`, so is an {term}`interpolated string` with a part that is `none`, and so
+is a list function given `none` for its list. An expression with an argument that is `none` gives `none`, at both times, except:
 
 - `or?`, `none?`, `some?` and `somes`, which give a value that is not `none` ({doc}`stdlib`)
 - `=` and `!=` ({numref}`equality-by-content`)
@@ -232,9 +230,6 @@ An expression with an argument that is `none` gives `none`, at both times, excep
 - `(list-of …)`, which gives a list holding `none`. A point with a coordinate that is `none` is `none`.
 - `if`, which is `none` only when the branch taken is
 - `map`, `reversed` and a read of a list's item, which pass `none` items through
-
-An attribute of `none` is `none`, so is an {term}`interpolated string` with a part that is `none`, and so
-is a list function given `none` for its list.
 ```
 
 :::{admonition} Code differs
@@ -307,16 +302,14 @@ The points form a vector space over the reals: `+` and `-` work coordinate by co
 This rule exists so that the compiler can give every arithmetic result a type before it is computed.
 
 ```{rule} number-result-types
-An arithmetic result has the broadest type of its arguments, in the order `int`, `ratio`, `real`, `complex`,
+Where a real meets an int or a ratio, the int or the ratio is first converted to the nearest real, ties
+going to the real whose last bit is 0. An arithmetic result has the broadest type of its arguments, in the order `int`, `ratio`, `real`, `complex`,
 except that:
 
 - `/` of two ints gives a ratio
 - `^` of an int to an int power gives an int when the power's range holds no negative int, and a ratio
   otherwise. With a {term}`complex` argument it gives a complex, and otherwise a real.
 - `abs` of a complex gives a real
-
-Where a real meets an int or a ratio, the int or the ratio is first converted to the nearest real, ties
-going to the real whose last bit is 0.
 ```
 
 ### The number limit
@@ -331,9 +324,8 @@ Every number lies within the number limit, -10¹⁵⁰ to 10¹⁵⁰, at both ti
   numbers, points and lists included.
 - A number written to a container is clamped to the limit, number by number.
 - A {term}`literal` beyond the limit is a compile error.
-
-An int or a ratio is clamped to exactly -10¹⁵⁰ or 10¹⁵⁰, and a real to `1e150`, the binary64 number
-nearest to 10¹⁵⁰, just below it, or to minus that number.
+- An int or a ratio is clamped to exactly -10¹⁵⁰ or 10¹⁵⁰, and a real to `1e150`, the binary64 number
+  nearest to 10¹⁵⁰, just below it, or to minus that number.
 ```
 
 So no call overflows, and no call results in `none` because of the size of its result. An
@@ -432,7 +424,9 @@ This rule exists so that two calls of a random function in one source give diffe
 
 ```{rule} random-site
 Each call of the random function `rand`, `rand-int`, `choice` or `shuffled`, by any name that an
-import makes usable for it, has a {term}`site`: a whole number. The sites are counted from 0, in
+import makes usable for it, has a {term}`site`: a whole number. A call in a branch that is not
+taken has a site too. The site is written in the expression in the .mtpc ({doc}`compiled-format`).
+The sites are counted from 0, in
 the order in which the calls start in the text of the source after the rewrite step
 ({numref}`compile-steps`), read with these changes:
 
@@ -440,12 +434,9 @@ the order in which the calls start in the text of the source after the rewrite s
 - Each `foreach` is read as its copies, in the order of the copy index.
 - Each declaration `(M …)` of an `M`, for a motif `M`, is read as itself, followed by the body of
   `M`. The body of a `motif` declaration is read only in each `M` that the source declares.
-
-A call that is written in the arguments of another call starts after it, and so comes after it. A
-call in a branch that is not taken has a site too. The site is written in the expression in the
-.mtpc ({doc}`compiled-format`).
 ```
 
+So a call that is written in the arguments of another call starts after it, and so comes after it.
 So each copy and each shape declared with a motif has sites of its own, and so does each copy of a
 call that a {term}`rewrite` makes. In
 
@@ -474,7 +465,9 @@ This rule exists so that every runtime computes the same random value from the s
 
 ```{rule} random-hash
 The hash h of whole numbers x₁, …, xₙ is a whole number below 2³², computed with every product taken modulo
-2³², every xor and shift on 32-bit numbers, and `>>` the shift that fills with zeros:
+2³², every xor and shift on 32-bit numbers, and `>>` the shift that fills with zeros. For a seed
+value s, a site p and a whole number k, u(s, p, k) = h(s, p, k) / 2³², a number from 0 up to 1,
+never 1.
 
     h = 0x811c9dc5
     for each x, in order:
@@ -484,9 +477,6 @@ The hash h of whole numbers x₁, …, xₙ is a whole number below 2³², compu
         h = h xor (h >> 12)
         h = h × 0x297a2d39
         h = h xor (h >> 15)
-
-For a seed value s, a site p and a whole number k, u(s, p, k) = h(s, p, k) / 2³², a number from 0
-up to 1, never 1.
 ```
 
 Since only each x modulo 2³² enters the hash, two seed values that are equal modulo 2³², such as 0,

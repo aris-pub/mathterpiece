@@ -62,9 +62,7 @@ Each form in the first column of this table is syntactic sugar, and means exactl
 second column, when the conditions in the third column hold. A syntactic sugar form whose conditions do not
 hold is a {term}`compile error`. A rewrite may move text or copy it, and each name in the moved or
 copied text refers to what it referred to where it was written. A rewrite may give
-syntactic sugar forms, which are rewritten in turn, until no syntactic sugar form is left.
-
-In the table, a name in capitals stands for any text that its row allows, and `…` after it for
+syntactic sugar forms, which are rewritten in turn, until no syntactic sugar form is left. In the table, a name in capitals stands for any text that its row allows, and `…` after it for
 any number of such texts.
 
 | Written | Means exactly | Conditions |

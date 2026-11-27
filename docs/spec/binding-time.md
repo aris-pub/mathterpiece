@@ -10,7 +10,8 @@ expressions may read the scene, the formulas and the page objects.
 This rule exists to decide which expressions the compiler computes and which it leaves to the runtime.
 
 ```{rule} known-when-compiling
-An expression is known when compiling when it is:
+An expression is known when compiling when it is one of the following. Every other expression is
+known only while drawing.
 
 - a literal
 - a function declared with `func`, or a built-in function
@@ -21,8 +22,6 @@ An expression is known when compiling when it is:
 - a parameter whose argument is known when compiling
 - a form whose evaluated parts are all known when compiling, except a call of `rand`, `rand-int`,
   `choice` or `shuffled`
-
-Every other expression is known only while drawing.
 ```
 
 So a free container is known only while drawing, since a writer may write to it, and so is every

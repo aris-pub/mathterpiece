@@ -70,8 +70,11 @@ the box of the shape depends on the shapes in its body.
 This rule exists to determine, at each place in a source, which names may be used there.
 
 ```{rule} scopes
-A {term}`scope` is a part of a source in which some names may be used. These are the scopes of mtp,
-and the names of each one:
+A {term}`scope` is a part of a source in which some names may be used. The scope of a body is inside
+the scope of the form around it, and every scope is inside the file scope. A group, a row, a column
+and the scene make no scope of their own. The names that are declared in the items of a `let` or of
+a `foreach` written in a body belong to the scope of that body: only the names that the `let` or the
+`foreach` binds belong to its own scope. These are the scopes of mtp, and the names of each one:
 
 | Scope | Covers | Names |
 |---|---|---|
@@ -80,11 +83,6 @@ and the names of each one:
 | a `let` | for each name, the expressions given to the names after it, and the items of the `let` | the names that it binds |
 | a `foreach` | the items of the `foreach` | the name that it binds |
 | a listener with `(as N)` | its movement | `N` |
-
-The scope of a body is inside the scope of the form around it, and every scope is inside the file
-scope. A group, a row, a column and the scene make no scope of their own. The names that are
-declared in the items of a `let` or of a `foreach` written in a body belong to the scope of that
-body: only the names that the `let` or the `foreach` binds belong to its own scope.
 ```
 
 A source holds at most one scene ({numref}`top-level-forms`), so the shapes of the scene can be names
@@ -136,16 +134,15 @@ In the scene and in the body of a motif, the compiler follows this. In a group,
 This rule exists so that every compiler resolves each name to the same declaration.
 
 ```{rule} name-lookup
-A use of a name, and the first {term}`name part` of a {term}`qualified name`, refers to the first of:
+A use of a name, and the first {term}`name part` of a {term}`qualified name`, refers to the first of the two below. When neither finds the name, the source is a
+{term}`compile error`. When the file rand gives a name of that text ({ref}`stdlib-rand`), the
+message is "N comes from the standard library: (import rand N)", and for `rand.N` it is "rand.N
+comes from the standard library: (import rand)".
 
 1. The declaration or binding of the name in the innermost scope around the use that has the name
    before the use ({numref}`declare-before-use`), or, for an imported name, its declaration in the
    imported file.
 2. A built-in function or constant of that name ({doc}`stdlib`).
-
-When neither finds the name, the source is a {term}`compile error`. When the file rand gives a name of
-that text ({ref}`stdlib-rand`), the message is "N comes from the standard library: (import rand N)",
-and for `rand.N` it is "rand.N comes from the standard library: (import rand)".
 ```
 
 So a source that calls `(rand-int 1 6)` and imports no `rand-int` is a compile error, "rand-int

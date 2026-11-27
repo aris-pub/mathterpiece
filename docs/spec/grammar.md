@@ -164,7 +164,9 @@ The six kinds of expression after syntactic sugar is rewritten. Compounds, decla
 This rule exists so that every compiler turns each short spelling into the same form.
 
 ```{rule} parser-sugar
-The parser produces each spelling on the left as the form on the right:
+The parser produces each spelling on the left as the form on the right. The form has the position
+of the first character of its spelling. A `(. X Y)` that follows a name string has the position of
+its `.` or `[`.
 
 | Written | Is the form |
 |---|---|
@@ -175,9 +177,6 @@ The parser produces each spelling on the left as the form on the right:
 | `@'dot-{k}'[i]` | `(. (name f'dot-{k}') i)` |
 | `{a b c}[h]` | `(. {a b c} h)` |
 | `f'x = {x:.2f}!'` | `(concat 'x = ' (fmt x '.2f') '!')`. Each piece of text, as long as possible, is a string literal, each `{X}` is `(fmt X)`, and each `{X:S}` is `(fmt X 'S')`, in the order of the text |
-
-The form has the position of the first character of its spelling. A `(. X Y)` that follows a name
-string has the position of its `.` or `[`.
 ```
 
 This rule exists to specify the form that the parser makes from a head that ends with `_`.

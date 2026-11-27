@@ -129,15 +129,20 @@ Types are not values: no container holds one. These expressions evaluate to type
   `variant` or `animation` declares
 - `(type-apply …)`, `(type-union …)` and `(type-intersect …)` ({numref}`type-forms`)
 - `(mod T lo hi)` ({numref}`modular-types`) and `(T C…)` ({numref}`constraints`)
+```
 
-They may be written only where a type is expected, and only they may be written there:
+This rule exists so that the compiler rejects a type that is written where a value is expected, and
+a value that is written where a type is expected.
+
+```{rule} where-types-are-written
+Types ({numref}`type-notation`) may be written only where a type is expected, and only they may be
+written there. A type written anywhere else, or a value written where a type is expected, is a
+{term}`compile error`. These are the places where a type is expected:
 
 - the head of a declaration, such as `real` in `(real a 1)`, and the `TYPE` of `(var NAME TYPE DEFAULT)`
 - the type of a parameter, `(T N DEFAULT?)`, and of an interface item, `(T A C…)`
 - the `T` of `(type N T C…)`, the `R` of `(func[R] …)`, and the `T` of `(is X T)` and `(as T X)`
 - every item of the three type forms, the `T` of `(mod T lo hi)`, and the `T` of `(T C…)`
-
-A type written anywhere else, or a value written where a type is expected, is a {term}`compile error`.
 ```
 
 This rule exists to specify the type that each type form stands for.
@@ -177,16 +182,15 @@ This rule exists to fix the conditions that a type may have, so that the prover 
 ```{rule} constraints
 A condition is a clause that limits the values of the type in the form around it: `(T C…)` holds the
 values of T that meet every condition C. A condition has no meaning outside that form. A condition is one of these forms, each on the
-types of its row only, and its values are known when compiling:
+types of its row only, and its values are known when compiling. Any other form in the place of a
+condition, and a condition on a type outside its row, is a compile error. A type of objects may not
+have a condition: an intersection with an interface limits it instead.
 
 | Condition | On | The values that meet it | Written with |
 |---|---|---|---|
 | `(>= c)`, `(> c)`, `(<= c)`, `(< c)` | `int`, `ratio`, `real` | the numbers at least c, above c, at most c, below c | one number |
 | `(length n)` | `list[T]`, `string` | the lists or the strings of n items | one int, 0 or more |
 | `(one-of v1 … vk)` | the numbers, `bool`, `string`, `color`, `point`, `list[T]` | the values v1 to vk | one value or more |
-
-Any other form in the place of a condition, and a condition on a type outside its row, is a compile
-error. A type of objects may not have a condition: an intersection with an interface limits it instead.
 ```
 
 `(const)` is not a condition: a variable or an attribute is free, bound or const
@@ -226,7 +230,8 @@ This rule exists so that a variable or a parameter given no value still holds a 
 
 ```{rule} type-values
 A variable declared with no value, and a parameter with no default that is left out, hold the
-default value of their type, given by the first row of this table that matches the type:
+default value of their type, given by the first row of this table that matches the type. Leaving out
+the value of a type that has no default value is a compile error.
 
 | Type | Its default value |
 |---|---|
@@ -242,8 +247,6 @@ default value of their type, given by the first row of this table that matches t
 | `list[T]` | `{}`, and with `(length n)`, n items, each the value of T |
 | a union with `none` | `none` |
 | every other type | none: the variable or the parameter must be given a value |
-
-Leaving out the value of a type that has no default value is a compile error.
 ```
 
 So `(real k (>= 1))` holds 1, `(real k (<= -1))` holds -1, and `(real k (> 1))` is a compile error,
@@ -268,7 +271,8 @@ So `(string s 'red')` followed by `(circle d (fill s))` is a compile error, whil
 This rule exists so that the prover can tell which lists have a length known when compiling, which the reads of items and some `foreach` forms need.
 
 ```{rule} known-lengths
-The length of a list is {term}`known <known length>` when its type holds `(length n)`. These lists have it:
+The length of a list is {term}`known <known length>` when its type holds `(length n)`. These lists have it. When
+every item of a list is a list of known length m, the list has `(length m)` in its item type.
 
 - `(list-of X…)` with n items: n
 - a list known when compiling: its length
@@ -277,8 +281,6 @@ The length of a list is {term}`known <known length>` when its type holds `(lengt
   known length: that length
 - a spread `g.A` of a group, and `g.members`: the number of members
 - a call of a {term}`built-in` function: the length that {doc}`stdlib` states
-
-When every item of a list is a list of known length m, the list has `(length m)` in its item type.
 ```
 
 So the length of `(list xs {side 0 1})` is known, 3, even when `side` is known only while
@@ -291,15 +293,13 @@ writer may write lists of another length to them.
 This rule exists so that a missing value never stops the page: a `none` may go into a call, which then gives `none`, or into a shape, which is then not drawn, and nowhere else.
 
 ```{rule} none-only-where-allowed
-A type includes `none` when it is `none` or a union with `none`. A value of such a type may go where the
+A few built-in functions treat `none` in their own way ({numref}`none-never-a-condition`). A type includes `none` when it is `none` or a union with `none`. A value of such a type may go where the
 expected type does not include `none` only:
 
 - as an argument of a call, which then evaluates to `none` whenever that argument is `none`, and whose
   type includes `none`
 - as an attribute of a shape declared `T|none`, which is then `none`, and not drawn, whenever that
   attribute is `none` ({numref}`none-propagates`)
-
-A few built-in functions treat `none` in their own way ({numref}`none-never-a-condition`).
 ```
 
 In the first example, `s` is `none`, so the call `(* 2 s)` is `none` too, and its type is
@@ -372,14 +372,13 @@ This rule exists so that a function or a motif can accept every value that has s
 ```{rule} interfaces
 An interface `(interface N (T1 A1 C1…) …)` is the set of the values that have each attribute Ai, of
 a subtype of `(Ti Ci…)`. A value whose type is an interface may be read only through the attributes
-Ai. These interfaces are built in:
+Ai. These interfaces are built in. The type `instant` is `(type instant movement&zero-duration)`: the
+movements whose duration is 0.
 
 | Interface | Definition |
 |---|---|
 | `positioned` | `(interface positioned (real x) (real y))` |
 | `zero-duration` | `(interface zero-duration (real duration (one-of 0)))` |
-
-The type `instant` is `(type instant movement&zero-duration)`: the movements whose duration is 0.
 ```
 
 So `(func label-at ((positioned o) (string s)) …)` may be given points, which are primitives, and
@@ -476,7 +475,8 @@ function that calls itself must declare its result type.
 This rule exists so that every compiler checks each expression against the same type.
 
 ```{rule} expected-types
-The expected type of an expression depends on where it is written in the form around it:
+The expected type of an expression depends on where it is written in the form around it. Every other
+expression has no expected type.
 
 | The expression | Its expected type |
 |---|---|
@@ -487,8 +487,6 @@ The expected type of an expression depends on where it is written in the form ar
 | the test `C` of `(if C A B)` | `bool` |
 | an item of a list `{X…}` whose expected type is `list[T]` | `T` |
 | a value that a writer writes | the type of its target, without its conditions ({numref}`written-values`) |
-
-Every other expression has no expected type.
 ```
 
 ## The type of each expression
@@ -496,7 +494,8 @@ Every other expression has no expected type.
 This rule exists so that every compiler gives each expression the same type.
 
 ```{rule} form-types
-Each expression except a clause and a special form has this type:
+The type of each expression that is given where a type is expected must be a subtype of that type
+({numref}`subtypes`), or the expression must meet its conditions by {numref}`constraint-proof`. Each expression except a clause and a special form has this type:
 
 | Expression | Its type |
 |---|---|
@@ -520,9 +519,6 @@ Each expression except a clause and a special form has this type:
 | `(type-of X)` | `string`. X is not evaluated |
 | a declaration | the type of what it declares |
 | `(free X)` | the type of X |
-
-The type of each expression that is given where a type is expected must be a subtype of that type
-({numref}`subtypes`), or the expression must meet its conditions by {numref}`constraint-proof`.
 ```
 
 So `(int m (if on 1 2.5))` is a compile error, since the type of the branches is `int|real`, which is
