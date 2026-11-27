@@ -154,13 +154,26 @@ This rule exists to fix the named arguments of each kind of shape, their types a
 
 ````{rule} shape-signatures
 These are the signatures of the shapes that are not groups. Each named argument in them is an
-attribute of the shape, of the type and with the default that the signature gives:
+attribute of the shape, of the type and with the default that the signature gives.
+`(like positioned)` stands for `(x:real 0) (y:real 0)`. The first six shapes take their position as
+arguments, and the other five take points, with no `x` or `y` among their arguments:
 
 ```mtp-sig
-(circle NAME (like shape) (x:real 0) (y:real 0) (r:(real (>= 0)) 1) (doc:string ''))
-(rect NAME (like shape) (x:real 0) (y:real 0)
+(circle NAME (like shape) (like positioned) (r:(real (>= 0)) 1) (doc:string ''))
+(rect NAME (like shape) (like positioned)
   (width:real 1) (height:real 1) (rx:real 0) (ry:real 0) (doc:string ''))
-(ellipse NAME (like shape) (x:real 0) (y:real 0) (rx:real 1) (ry:real 1) (doc:string ''))
+(ellipse NAME (like shape) (like positioned) (rx:real 1) (ry:real 1) (doc:string ''))
+(arc NAME (like shape) (like positioned) (r:(real (>= 0)) 1) (from:real 0) (to:real 360)
+  (head-start:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
+  (head-end:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
+  (head-size:(real (>= 0)) 1) (doc:string ''))
+(ring NAME (like shape) (like positioned) (r:(real (>= 0)) 1) (width:(real (>= 0)) 0.5)
+  (from:real 0) (to:real 360) (doc:string ''))
+(text NAME VALUE:string (like shape) (like positioned)
+  (halign:(string (one-of 'start' 'middle' 'end')) 'start')
+  (valign:(string (one-of 'top' 'middle' 'baseline' 'bottom')) 'baseline')
+  (face:font (font_)) (doc:string ''))
+
 (line NAME (like shape) (from:point [0 0]) (to:point [1 0])
   (head-start:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
   (head-end:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
@@ -175,16 +188,6 @@ attribute of the shape, of the type and with the default that the signature give
   (head-start:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
   (head-end:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
   (head-size:(real (>= 0)) 1) (doc:string ''))
-(arc NAME (like shape) (x:real 0) (y:real 0) (r:(real (>= 0)) 1) (from:real 0) (to:real 360)
-  (head-start:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
-  (head-end:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
-  (head-size:(real (>= 0)) 1) (doc:string ''))
-(ring NAME (like shape) (x:real 0) (y:real 0) (r:(real (>= 0)) 1) (width:(real (>= 0)) 0.5)
-  (from:real 0) (to:real 360) (doc:string ''))
-(text NAME VALUE:string (like shape) (x:real 0) (y:real 0)
-  (halign:(string (one-of 'start' 'middle' 'end')) 'start')
-  (valign:(string (one-of 'top' 'middle' 'baseline' 'bottom')) 'baseline')
-  (face:font (font_)) (doc:string ''))
 ```
 ````
 
