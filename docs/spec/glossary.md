@@ -330,7 +330,7 @@ container
   ({doc}`data-model`).
 
 collection
-  A group, a row, a column or a movement group: an object that holds other objects, its members.
+  A group or a movement group: an object that holds other objects, its members.
 
 primitive
   A value that never changes and has no identity, such as a number, a string or a list

@@ -189,7 +189,7 @@ When `K` is a motif, `(like M)` does not copy its `clip` (mtp-ydd4.7.20).
 This rule exists because a group has no position of its own, so a drag of a group needs a stated target.
 
 ```{rule} drag-group-shift
-A group, a row or a column is dragged by its `shift`, `shift-x` or `shift-y`. In an `on-drag` whose
+A group is dragged by its `shift`, `shift-x` or `shift-y`. In an `on-drag` whose
 target is one of these, the name that `(as …)` binds is the `shift` at the press plus the pointer's
 motion since, in the frame of the collection's own collection. A target that is the collection's
 `pos`, `x` or `y` is a {term}`compile error`, "a group has no x of its own: drag its shift, as

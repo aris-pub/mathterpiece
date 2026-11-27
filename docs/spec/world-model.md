@@ -65,7 +65,7 @@ still written, read and written to in the coordinates of the scene.
 This rule exists to define the tree of the scene and its collections, which sets what each collection holds and the order in which the runtime draws shapes.
 
 ```{rule} members
-The members of the scene, of a group, of a row and of a column are the shapes declared in its {term}`body`,
+The members of the scene and of a group are the shapes declared in its {term}`body`,
 in the order of the source after the expand step ({numref}`compile-steps`). So every shape of the
 scene that is not declared in the body of a motif or in a `(clip …)` is a member of exactly one of
 them, and they form a tree whose root is the scene. A shape is in
@@ -282,10 +282,10 @@ that order (compiler.py:217-220, web/src/runtime.ts:410-428). Bead mtp-1vyc.
 
 ## Collections
 
-This rule exists to fix the named arguments of a group, a row and a column.
+This rule exists to fix the named arguments of the forms that declare a group.
 
 ````{rule} collection-signatures
-A group, a row and a column have these signatures:
+`(group …)`, `(row …)` and `(column …)` each declare a group, and have these signatures:
 
 ```mtp-sig
 (group NAME
@@ -345,7 +345,7 @@ A collection may set these attributes on its members, and only on the members th
 every attribute of `(like shape)` except the frame, but no `stroke`, `stroke-width`, `dash`,
 `dash-offset`, `line-cap`, `line-join` or `drawn` on a text. It may also set `halign`, `valign` and
 `face` on a text, `head-start`, `head-end` and `head-size` on a line, a polyline, a bezier and an arc,
-and `fixed-size` on a group, a row or a column.
+and `fixed-size` on a group.
 ```
 
 So `(group labels (defaults (fill #'gray') (halign 'middle') (stroke #'black')) …)` sets the
@@ -355,10 +355,10 @@ frame on its members: it moves them with its own frame.
 
 ## Defaults on a collection and on a shape declared with a motif
 
-This rule exists so that a group, a row or a column can set an attribute once for all its members.
+This rule exists so that a group can set an attribute once for all its members.
 
 ```{rule} collection-defaults
-A `(defaults (A V)…)` on a group, a row or a column sets `A` to `V` on each member, at any depth, that a
+A `(defaults (A V)…)` on a group sets `A` to `V` on each member, at any depth, that a
 collection may set `A` on and whose declaration does not set `A`, the nearest collection winning. On a
 member declared with a motif, each `(A V)` is added to its own `(defaults …)`. On a shape declared with
 a motif, which is not a collection ({doc}`data-model`), it sets `A` on every shape of the motif's body,

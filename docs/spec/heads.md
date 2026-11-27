@@ -134,7 +134,7 @@ mtp-ydd4.7.59.
 | `pos` | syntactic sugar | a clause | {numref}`sugar-rewrites` |
 | `dash` | core | a clause | {doc}`world-model` |
 | `like` | syntactic sugar | a clause | {numref}`like-copies` |
-| `defaults` on a group, a row or a column | core | a clause | {numref}`collection-defaults` |
+| `defaults` on a group | core | a clause | {numref}`collection-defaults` |
 | `clip` | core | a clause | {doc}`world-model` |
 | `fixed-size` | core | a clause | {doc}`world-model` |
 | `gap`, `align` | core | a clause | {doc}`world-model` |
@@ -376,10 +376,10 @@ their place. They are not forms of the language.
 | `dash-offset` | as an item | write `(dash {4 2} 1)` |
 | `move` | in a canvas | a canvas takes no `(move …)` |
 | `term` | at the top level | a term is given inside its formula |
-| `pointer-events` | on a group, a row, a column or a shape of a motif | write `(defaults (pointer-events B))` |
+| `pointer-events` | on a group or a shape of a motif | write `(defaults (pointer-events B))` |
 
 :::{admonition} Code differs
 :class: note
-The compiler accepts `(pointer-events B)` on a group, a row, a column or a shape of a motif as a default
+The compiler accepts `(pointer-events B)` on a group or a shape of a motif as a default
 for its members (compiler.py:4895-4941, 5395-5443). Bead mtp-327t makes it a compile error.
 :::

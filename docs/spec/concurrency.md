@@ -59,7 +59,7 @@ Two writers meet when both emit writes to one free container. A write to a targe
 several containers is a write to each of them:
 
 - The `pos` of a shape stands for its `x` and its `y`.
-- An attribute that a group, a row or a column does not have of its own stands for that attribute of
+- An attribute that a group does not have of its own stands for that attribute of
   each member that has it, at any depth, and so does an attribute of a shape declared with a motif
   that {numref}`collection-defaults` lets it set on the shapes of its body.
 - The `x` of a line, a triangle, a polyline, a polygon and a bezier stands for the `x` of each of
