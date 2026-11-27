@@ -120,6 +120,8 @@ class MtpSigLexer(RegexLexer):
     aliases = ["mtp-sig"]
     tokens = {
         "root": [
+            # A comment line heads a group of signatures in one block (the author, 2026-11-27).
+            (r"^;.*$", Comment),
             (r"^(\()([a-z][\w-]*)", bygroups(Punctuation, Keyword)),
             (r":", Name.Builtin, "type"),
             (r"\s+", Whitespace),

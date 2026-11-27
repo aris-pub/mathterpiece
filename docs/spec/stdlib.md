@@ -62,17 +62,31 @@ This rule exists to give the built-in functions on numbers, which cannot be writ
 ````{rule} number-functions
 ```mtp-sig
 (abs X:int|ratio|real|complex)
+
 (sqrt X:real)
+
 (exp X:real)
+
 (log X:real BASE:real?)
+
 (sign X:real)
+
 (round X:real)
+
 (floor X:real)
+
 (ceil X:real)
+
 (places X:real K:int)
+
 (unwrap X:mod)
-(min ITEMS:real|list[real]+)
-(max ITEMS:real|list[real]+)
+
+(min
+  ITEMS:real|list[real]+)
+
+(max
+  ITEMS:real|list[real]+)
+
 (lerp A:real|point B:real|point T:real)
 ```
 
@@ -100,12 +114,63 @@ This rule exists to give the trigonometric functions, in radians and in degrees,
 
 ````{rule} angle-functions
 ```mtp-sig
-(sin X:real) (cos X:real) (tan X:real) (sec X:real) (csc X:real) (cot X:real)
-(sind X:real|angle) (cosd X:real|angle) (tand X:real|angle)
-(secd X:real|angle) (cscd X:real|angle) (cotd X:real|angle)
-(asin X:real) (acos X:real) (atan X:real) (acot X:real) (asec X:real) (acsc X:real)
-(asind X:real) (acosd X:real) (atand X:real) (acotd X:real) (asecd X:real) (acscd X:real)
-(rad X:real) (turn X:real) (deg X:real) (to-rad X:real) (to-turn X:real)
+(sin X:real)
+
+(cos X:real)
+
+(tan X:real)
+
+(sec X:real)
+
+(csc X:real)
+
+(cot X:real)
+
+(sind X:real|angle)
+
+(cosd X:real|angle)
+
+(tand X:real|angle)
+
+(secd X:real|angle)
+
+(cscd X:real|angle)
+
+(cotd X:real|angle)
+
+(asin X:real)
+
+(acos X:real)
+
+(atan X:real)
+
+(acot X:real)
+
+(asec X:real)
+
+(acsc X:real)
+
+(asind X:real)
+
+(acosd X:real)
+
+(atand X:real)
+
+(acotd X:real)
+
+(asecd X:real)
+
+(acscd X:real)
+
+(rad X:real)
+
+(turn X:real)
+
+(deg X:real)
+
+(to-rad X:real)
+
+(to-turn X:real)
 ```
 
 | Call | Its value | Result type | Range |
@@ -134,6 +199,7 @@ This rule exists to give the built-in functions that make a point from a distanc
 ````{rule} point-functions
 ```mtp-sig
 (polar R:real A:real|angle)
+
 (dist P:point Q:point)
 ```
 
@@ -149,10 +215,21 @@ This rule exists to give the functions that place one shape against another, by 
 
 ````{rule} box-points
 ```mtp-sig
-(top S:shape GAP:real?) (bottom S:shape GAP:real?)
-(left S:shape GAP:real?) (right S:shape GAP:real?)
-(top-left S:shape GAP:real?) (top-right S:shape GAP:real?)
-(bottom-left S:shape GAP:real?) (bottom-right S:shape GAP:real?)
+(top S:shape GAP:real?)
+
+(bottom S:shape GAP:real?)
+
+(left S:shape GAP:real?)
+
+(right S:shape GAP:real?)
+
+(top-left S:shape GAP:real?)
+
+(top-right S:shape GAP:real?)
+
+(bottom-left S:shape GAP:real?)
+
+(bottom-right S:shape GAP:real?)
 ```
 
 `(top S)`, `(bottom S)`, `(left S)` and `(right S)` evaluate to the middle of that side of the box
@@ -171,9 +248,13 @@ This rule exists to give the built-in functions that make colors, which cannot b
 ````{rule} color-functions
 ```mtp-sig
 (rgb R:unit G:unit B:unit A:unit?)
+
 (mix C:color D:color T:unit)
+
 (tint C:color T:unit)
+
 (shade C:color T:unit)
+
 (light-dark L:color D:color)
 ```
 
@@ -200,15 +281,29 @@ This rule exists to give the functions on lists, which take a list of any type, 
 ````{rule} list-functions
 ```mtp-sig
 (map XS:list[T] F:func[T U])
+
 (where XS:list[T] F:func[T bool])
+
 (first XS:list[T] F:func[T bool])
+
 (sorted XS:list[T] F:func[T real])
+
 (reversed XS:list[T])
+
 (reduce XS:list[T] START:A F:func[A T A])
+
 (sum XS:list[int]|list[ratio]|list[real]|list[complex])
+
 (count XS:list[T] F:func[T bool]?)
-(any XS:list[bool]) (any XS:list[T] F:func[T bool])
-(all XS:list[bool]) (all XS:list[T] F:func[T bool])
+
+(any XS:list[bool])
+
+(any XS:list[T] F:func[T bool])
+
+(all XS:list[bool])
+
+(all XS:list[T] F:func[T bool])
+
 (somes XS:list[T|none])
 ```
 
@@ -240,8 +335,11 @@ This rule exists to give `range`, which makes a list of numbers from its ends.
 
 ````{rule} range-function
 ```mtp-sig
-(range LO:real HI:real (gap:real 1))
-(range LO:real HI:real (num:int))
+(range LO:real HI:real
+  (gap:real 1))
+
+(range LO:real HI:real
+  (num:int))
 ```
 
 `(range LO HI (gap G))` is the list of the numbers LO + k × G, for k = 0, 1, 2 and so on, that are
@@ -263,7 +361,8 @@ This rule exists to give `steps`, which makes an ease from numbers, and so is a 
 
 ````{rule} steps-ease
 ```mtp-sig
-(steps N:(int (>= 1)) (at:unit 1))
+(steps N:(int (>= 1))
+  (at:unit 1))
 ```
 
 `(steps N (at P))` is the ease of N equal jumps, each at the fraction P of its
@@ -531,18 +630,35 @@ given here as signatures, and the function `tick-gap`:
 
 ```mtp-sig
 (axes NAME
-  (left:real -10) (right:real 10) (bottom:real -10) (top:real 10)
-  (ticks:real|none none) (numbers:bool true)
-  (stroke:color|none none) (arrows:bool false))
+  (left:real -10)
+  (right:real 10)
+  (bottom:real -10)
+  (top:real 10)
+  (ticks:real|none none)
+  (numbers:bool true)
+  (stroke:color|none none)
+  (arrows:bool false))
+
 (grid NAME
-  (left:real -10) (right:real 10) (bottom:real -10) (top:real 10)
+  (left:real -10)
+  (right:real 10)
+  (bottom:real -10)
+  (top:real 10)
   (step:(real (> 0)) 1)
-  (stroke:color|none none) (stroke-opacity:unit 0.25))
+  (stroke:color|none none)
+  (stroke-opacity:unit 0.25))
+
 (angle-mark NAME
-  (from:real 0) (to:real 90) (r:(real (>= 0)) 22) (label:string '')
+  (from:real 0)
+  (to:real 90)
+  (r:(real (>= 0)) 22)
+  (label:string '')
   (stroke:color|none none))
+
 (measure NAME
-  (from:point [0 0]) (to:point [1 0]) (label:string '')
+  (from:point [0 0])
+  (to:point [1 0])
+  (label:string '')
   (stroke:color|none none))
 ```
 
@@ -806,10 +922,18 @@ This rule exists to give the arguments, the result type and the range of each ra
 
 ````{rule} random-signatures
 ```mtp-sig
-(rand LO:real? HI:real? (seed:rand-seed|none none))
-(rand-int LO:int HI:int (seed:rand-seed|none none))
-(choice XS:list[T] (seed:rand-seed|none none))
-(shuffled XS:list[T] (seed:rand-seed|none none))
+(rand LO:real? HI:real?
+  (seed:rand-seed|none none))
+
+(rand-int LO:int HI:int
+  (seed:rand-seed|none none))
+
+(choice XS:list[T]
+  (seed:rand-seed|none none))
+
+(shuffled XS:list[T]
+  (seed:rand-seed|none none))
+
 (next-seed S:rand-seed)
 ```
 

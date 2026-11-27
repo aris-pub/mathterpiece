@@ -117,7 +117,9 @@ This rule exists to fix the named arguments that the shapes of every kind share,
   (fill:color|none (light-dark #'#000000' #'#ffffff'))
   (stroke:color|none none)
   (stroke-width:(real (>= 0)) 1)
-  (opacity:unit 1) (fill-opacity:unit 1) (stroke-opacity:unit 1)
+  (opacity:unit 1)
+  (fill-opacity:unit 1)
+  (stroke-opacity:unit 1)
   (dash LENGTHS:list[(real (>= 0))] OFFSET:real?)
   (line-cap:(string (one-of 'butt' 'round' 'square')) 'butt')
   (line-join:(string (one-of 'miter' 'round' 'bevel')) 'miter')
@@ -155,39 +157,103 @@ This rule exists to fix the named arguments of each kind of shape, their types a
 ````{rule} shape-signatures
 These are the signatures of the shapes that are not groups. Each named argument in them is an
 attribute of the shape, of the type and with the default that the signature gives.
-`(like positioned)` stands for `(x:real 0) (y:real 0)`. The first six shapes take their position as
-arguments, and the other five take points, with no `x` or `y` among their arguments:
+`(like positioned)` stands for `(x:real 0) (y:real 0)`. The shapes in the first group take their
+position as arguments, and the shapes in the second take points, with no `x` or `y` among their
+arguments:
 
 ```mtp-sig
-(circle NAME (like shape) (like positioned) (r:(real (>= 0)) 1) (doc:string ''))
-(rect NAME (like shape) (like positioned)
-  (width:real 1) (height:real 1) (rx:real 0) (ry:real 0) (doc:string ''))
-(ellipse NAME (like shape) (like positioned) (rx:real 1) (ry:real 1) (doc:string ''))
-(arc NAME (like shape) (like positioned) (r:(real (>= 0)) 1) (from:real 0) (to:real 360)
+; the shapes that take x and y
+
+(circle NAME
+  (like shape)
+  (like positioned)
+  (r:(real (>= 0)) 1)
+  (doc:string ''))
+
+(rect NAME
+  (like shape)
+  (like positioned)
+  (width:real 1)
+  (height:real 1)
+  (rx:real 0)
+  (ry:real 0)
+  (doc:string ''))
+
+(ellipse NAME
+  (like shape)
+  (like positioned)
+  (rx:real 1)
+  (ry:real 1)
+  (doc:string ''))
+
+(arc NAME
+  (like shape)
+  (like positioned)
+  (r:(real (>= 0)) 1)
+  (from:real 0)
+  (to:real 360)
   (head-start:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
   (head-end:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
-  (head-size:(real (>= 0)) 1) (doc:string ''))
-(ring NAME (like shape) (like positioned) (r:(real (>= 0)) 1) (width:(real (>= 0)) 0.5)
-  (from:real 0) (to:real 360) (doc:string ''))
-(text NAME VALUE:string (like shape) (like positioned)
+  (head-size:(real (>= 0)) 1)
+  (doc:string ''))
+
+(ring NAME
+  (like shape)
+  (like positioned)
+  (r:(real (>= 0)) 1)
+  (width:(real (>= 0)) 0.5)
+  (from:real 0)
+  (to:real 360)
+  (doc:string ''))
+
+(text NAME VALUE:string
+  (like shape)
+  (like positioned)
   (halign:(string (one-of 'start' 'middle' 'end')) 'start')
   (valign:(string (one-of 'top' 'middle' 'baseline' 'bottom')) 'baseline')
-  (face:font (font_)) (doc:string ''))
+  (face:font (font_))
+  (doc:string ''))
 
-(line NAME (like shape) (from:point [0 0]) (to:point [1 0])
+; the shapes that take points
+
+(line NAME
+  (like shape)
+  (from:point [0 0])
+  (to:point [1 0])
   (head-start:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
   (head-end:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
-  (head-size:(real (>= 0)) 1) (doc:string ''))
-(triangle NAME (like shape) (a:point [0 0]) (b:point [1 0]) (c:point [0 1]) (doc:string ''))
-(polyline NAME (like shape) (points:list[point] {})
+  (head-size:(real (>= 0)) 1)
+  (doc:string ''))
+
+(triangle NAME
+  (like shape)
+  (a:point [0 0])
+  (b:point [1 0])
+  (c:point [0 1])
+  (doc:string ''))
+
+(polyline NAME
+  (like shape)
+  (points:list[point] {})
   (head-start:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
   (head-end:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
-  (head-size:(real (>= 0)) 1) (doc:string ''))
-(polygon NAME (like shape) (points:list[point] {}) (doc:string ''))
-(bezier NAME (like shape) (from:point [0 0]) (to:point [1 0]) (controls:list[point] {[0.5 1]})
+  (head-size:(real (>= 0)) 1)
+  (doc:string ''))
+
+(polygon NAME
+  (like shape)
+  (points:list[point] {})
+  (doc:string ''))
+
+(bezier NAME
+  (like shape)
+  (from:point [0 0])
+  (to:point [1 0])
+  (controls:list[point] {[0.5 1]})
   (head-start:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
   (head-end:(string|none (one-of 'dart' 'curved' 'open' 'bar' 'dot')) none)
-  (head-size:(real (>= 0)) 1) (doc:string ''))
+  (head-size:(real (>= 0)) 1)
+  (doc:string ''))
 ```
 ````
 
@@ -326,10 +392,16 @@ This rule exists to fix the named arguments of the forms that declare a group.
   (fixed-size:bool false)
   (doc:string '')
   MEMBERS:(shape|exists-when|let|foreach)*)
-(row NAME (like group)
-  (gap:real 0) (align:(string (one-of 'top' 'middle' 'bottom')) 'middle'))
-(column NAME (like group)
-  (gap:real 0) (align:(string (one-of 'left' 'middle' 'right')) 'middle'))
+
+(row NAME
+  (like group)
+  (gap:real 0)
+  (align:(string (one-of 'top' 'middle' 'bottom')) 'middle'))
+
+(column NAME
+  (like group)
+  (gap:real 0)
+  (align:(string (one-of 'left' 'middle' 'right')) 'middle'))
 ```
 
 The parts of the frame of a group are attributes of it, and its other named arguments are not.

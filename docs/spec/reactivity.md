@@ -18,38 +18,57 @@ This rule exists to fix the arguments of each listener on a shape or a term, so 
   (priority:(int (>= 1) (<= 1000)) 700)
   (doc:string '')
   CONDITIONS:bool*)
+
 (on-pointermove SOURCE:shape? MOVEMENT:instant
-  (as:NAME none) (active:bool true) (stop-propagation:bool false)
+  (as:NAME none)
+  (active:bool true)
+  (stop-propagation:bool false)
   (priority:(int (>= 1) (<= 1000)) 700)
   (doc:string '')
   CONDITIONS:bool*)
+
 (on-click SOURCE:shape|term MOVEMENT:movement
-  (as:NAME none) (active:bool true) (stop-propagation:bool false)
+  (as:NAME none)
+  (active:bool true)
+  (stop-propagation:bool false)
   (priority:(int (>= 1) (<= 1000)) 500)
   (doc:string '')
   CONDITIONS:bool*)
+
 (on-release SOURCE:shape MOVEMENT:movement
-  (as:NAME none) (active:bool true) (stop-propagation:bool false)
+  (as:NAME none)
+  (active:bool true)
+  (stop-propagation:bool false)
   (priority:(int (>= 1) (<= 1000)) 500)
   (doc:string '')
   CONDITIONS:bool*)
+
 (on-dragstart SOURCE:shape MOVEMENT:movement
-  (as:NAME none) (active:bool true) (stop-propagation:bool false)
+  (as:NAME none)
+  (active:bool true)
+  (stop-propagation:bool false)
   (priority:(int (>= 1) (<= 1000)) 500)
   (doc:string '')
   CONDITIONS:bool*)
+
 (on-dragend SOURCE:shape MOVEMENT:movement
-  (as:NAME none) (active:bool true) (stop-propagation:bool false)
+  (as:NAME none)
+  (active:bool true)
+  (stop-propagation:bool false)
   (priority:(int (>= 1) (<= 1000)) 500)
   (doc:string '')
   CONDITIONS:bool*)
+
 (on-enter SOURCE:shape|term MOVEMENT:movement
-  (as:NAME none) (active:bool true)
+  (as:NAME none)
+  (active:bool true)
   (priority:(int (>= 1) (<= 1000)) 500)
   (doc:string '')
   CONDITIONS:bool*)
+
 (on-leave SOURCE:shape|term MOVEMENT:movement
-  (as:NAME none) (active:bool true)
+  (as:NAME none)
+  (active:bool true)
   (priority:(int (>= 1) (<= 1000)) 500)
   (doc:string '')
   CONDITIONS:bool*)

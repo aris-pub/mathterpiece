@@ -19,7 +19,9 @@ This rule exists to fix the arguments of the forms that create one movement, so 
   (path:func[T T real T] P)
   (lag:(real (>= 0)) L)
   (doc:string ''))
-(movement NAME TARGET (like move))
+
+(movement NAME TARGET
+  (like move))
 ```
 
 `TARGET` is the container that the movement writes to ({numref}`writable-targets`), or `none`, and
