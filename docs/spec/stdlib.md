@@ -372,8 +372,7 @@ The file `style` holds exactly these declarations:
 
 The eight hues each have a contrast of at least 3:1 with the paper of their page. The grays go from
 `gray-0`, the paper itself, to `gray-1000`, the farthest from it: black on a light page and a
-near-white on a dark one. A page restyles a world model that uses the roles `paper`, `ink`, `soft`
-and `accent` by giving those colors other values in its CSS ({numref}`compiler-never-acts-while-drawing`).
+near-white on a dark one.
 
 (stdlib-colors)=
 ### The file colors
