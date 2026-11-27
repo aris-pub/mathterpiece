@@ -85,7 +85,7 @@ a `foreach` written in a body belong to the scope of that body: only the names t
 | a listener with `(as N)` | its movement | `N` |
 ```
 
-A source holds at most one scene ({numref}`top-level-forms`), so the shapes of the scene can be names
+A source holds at most one scene ({numref}`the-scene`), so the shapes of the scene can be names
 of the file scope without two scenes declaring the same name, and a canvas or a listener may use them
 with no prefix, as `frame` or `triangles`. A source may hold several formulas, and two of them may
 each have a term `a`, so each formula makes a scope of its own, and its terms may be used outside
