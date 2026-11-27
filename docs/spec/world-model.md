@@ -15,10 +15,12 @@ This rule exists to fix what the {term}`compiler` builds from one source, and so
 ```{rule} what-a-world-model-holds
 The world model of a source is every variable, type and object that the
 {term}`declarations <declaration>` of the source create ({numref}`declarations-and-bindings`), and every declaration of an imported file that the
-source uses ({numref}`mtpc-imported-declarations`). It holds every copy that a `foreach` makes and
-every shape that `(M …)` declares for a motif `M`, as the expand step writes them out
-({numref}`compile-steps`). The runtime holds it as the {term}`live model`.
+source uses ({numref}`mtpc-imported-declarations`).
 ```
+
+So the world model holds every copy that a `foreach` makes and every shape that `(M …)` declares for
+a motif `M`, as the expand step writes them out ({numref}`compile-steps`). The runtime holds it as the
+{term}`live model`.
 
 ## Coordinates
 
