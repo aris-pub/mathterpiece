@@ -280,3 +280,20 @@ html[data-theme] .bd-content table.table td:first-child code * { color: inherit;
   font-size: 0.8rem;
   font-weight: 400;
 }
+
+/* mtp source (```mtp, live examples and inline code) in the colors of editors/mtp-mode.el, as the
+   signatures are (the author, 2026-11-27). */
+html { --mtp-src-call: #75507b; --mtp-src-fname: #a40000; --mtp-src-doc: #4e6a5a; --mtp-src-free: #cc0000; }
+html[data-theme="dark"] { --mtp-src-call: #ad7fa8; --mtp-src-fname: #ef2929; --mtp-src-doc: #8ae2a0; --mtp-src-free: #ef2929; }
+html[data-theme] :is(div.highlight-mtp, code.mtp-inline) :is(.n, .p, .w, .x, .o) { color: var(--pst-color-text-base); font-weight: inherit; }
+html[data-theme] :is(div.highlight-mtp, code.mtp-inline) .k { color: var(--mtp-sig-head); font-weight: 700; }
+html[data-theme] :is(div.highlight-mtp, code.mtp-inline) .nv { color: var(--mtp-sig-name); }
+html[data-theme] :is(div.highlight-mtp, code.mtp-inline) .nc { color: var(--mtp-src-fname); }
+html[data-theme] :is(div.highlight-mtp, code.mtp-inline) .na { color: var(--mtp-sig-arg); }
+html[data-theme] :is(div.highlight-mtp, code.mtp-inline) .nf { color: var(--mtp-src-call); }
+html[data-theme] :is(div.highlight-mtp, code.mtp-inline) .nb { color: var(--mtp-sig-type); }
+html[data-theme] :is(div.highlight-mtp, code.mtp-inline) .ne { color: var(--mtp-src-free); font-weight: 700; }
+html[data-theme] :is(div.highlight-mtp, code.mtp-inline) :is(.m, .mi, .mf) { color: var(--mtp-sig-number); }
+html[data-theme] :is(div.highlight-mtp, code.mtp-inline) :is(.s, .kc) { color: var(--mtp-sig-string); }
+html[data-theme] :is(div.highlight-mtp, code.mtp-inline) .sd { color: var(--mtp-src-doc); }
+html[data-theme] :is(div.highlight-mtp, code.mtp-inline) :is(.c, .c1) { color: var(--mtp-sig-comment); font-style: normal; }

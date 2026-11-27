@@ -23,7 +23,7 @@ from pathlib import Path
 
 from docutils import nodes
 from docutils.parsers.rst import directives
-from pygments.lexer import RegexLexer, bygroups, default
+from pygments.lexer import Lexer, RegexLexer, bygroups, default
 from pygments.token import (
     STANDARD_TYPES,
     Comment,
@@ -176,30 +176,151 @@ class MtpSigLexer(RegexLexer):
     }
 
 
-class MtpLexer(RegexLexer):
+def _elisp_list(name):
+    """The strings of the list that editors/mtp-mode.el declares as NAME, so that the spec site
+    colors mtp source exactly as the Emacs mode does (the author, 2026-11-27)."""
+    text = (Path(__file__).resolve().parents[2] / "editors" / "mtp-mode.el").read_text()
+    at = text.index(f"(defconst {name}")
+    at = text.index("'(", at) + 1
+    depth, end = 0, at
+    for end in range(at, len(text)):
+        depth += {"(": 1, ")": -1}.get(text[end], 0)
+        if depth == 0:
+            break
+    return set(re.findall(r'"([^"]*)"', text[at:end + 1]))
+
+
+EL_HEADS = _elisp_list("mtp-mode--heads")
+EL_NAMED = _elisp_list("mtp-mode--named-heads")
+EL_ARGUMENTS = _elisp_list("mtp-mode--arguments")
+EL_TYPES = _elisp_list("mtp-mode--types")
+EL_FUNCTION_HEADS = {"func", "motif", "variant", "type", "choreo"}
+EL_CONSTANTS = {"none", "true", "false", "self"}
+
+_MTP_TOKEN = re.compile(
+    r"""(?P<ws>\s+)
+      | (?P<comment>;[^\n]*)
+      | (?P<doc>doc@)(?P<docstr>'(?:\\.|[^'\\])*')
+      | (?P<tex>tex)(?P<texstr>'(?:\\.|[^'\\])*')
+      | (?P<free>free@)
+      | (?P<string>[f@#$]?'(?:\\.|[^'\\])*')
+      | (?P<number>[-+]?[0-9]+(?:/[0-9]+|(?:\.[0-9]*)?(?:e[-+]?[0-9]+)?i?)(?![\w-]))
+      | (?P<open>\()
+      | (?P<close>\))
+      | (?P<bracket>\[[^\]\s()]*\])
+      | (?P<punct>[{}\[\]|.])
+      | (?P<word>[^\s()\[\]{}|.';]+)
+      | (?P<other>.)""",
+    re.X,
+)
+
+
+class MtpLexer(Lexer):
+    """mtp source, in the colors of editors/mtp-mode.el (the author, 2026-11-27): the head of a
+    form, the name that a form declares, a keyword argument, a call, a type inside brackets, the
+    names that a let binds, numbers, strings, constants and comments, each as the Emacs mode
+    colors it. mtp.css gives each token class its color."""
+
     name = "mtp"
     aliases = ["mtp"]
     filenames = ["*.mtp"]
 
-    tokens = {
-        "root": [
-            (r"\s+", Whitespace),
-            (r";.*$", Comment.Single),
-            (r"f'(\\.|[^'\\])*'", String.Interpol),
-            (r"@'(\\.|[^'\\])*'", String.Other),
-            (r"#'(\\.|[^'\\])*'", String.Other),
-            (r"\$'(\\.|[^'\\])*'", String),
-            (r"'(\\.|[^'\\])*'", String),
-            (r"(doc|free)@", Keyword),
-            (r"[-+]?[0-9]+/[0-9]+", Number),
-            (rf"[-+]?{UREAL}([-+]{UREAL}i|i)?", Number),
-            (r"(\.)(" + NAME + ")", bygroups(Punctuation, Name.Attribute)),
-            (r"[(){}\[\]|]", Punctuation),
-            (NAME, _word),
-            (OPERATOR, Operator),
-            (r".", Text),
-        ]
-    }
+    def get_tokens_unprocessed(self, text):
+        stack = []  # for each open parenthesis: True when it holds the bindings of a let
+        after_open = False
+        declare = None  # the token kind of the name that the form being read declares
+        last_head = None
+        for m in _MTP_TOKEN.finditer(text):
+            kind, value, pos = m.lastgroup, m.group(), m.start()
+            if kind in ("doc", "docstr"):
+                yield m.start("doc"), Name.Attribute, m.group("doc")
+                yield m.start("docstr"), String.Doc, m.group("docstr")
+                after_open = False
+                continue
+            if kind in ("tex", "texstr"):
+                yield m.start("tex"), Name.Attribute, m.group("tex")
+                yield m.start("texstr"), String, m.group("texstr")
+                after_open = False
+                continue
+            if kind == "ws":
+                yield pos, Whitespace, value
+                continue
+            if kind == "comment":
+                yield pos, Comment.Single, value
+                continue
+            if kind == "open":
+                in_let = _just_after_let(text, pos)
+                stack.append(in_let)
+                yield pos, Punctuation, value
+                after_open = True
+                continue
+            if kind == "close":
+                if stack:
+                    stack.pop()
+                yield pos, Punctuation, value
+                after_open = False
+                declare = None
+                continue
+            if kind == "bracket":
+                yield pos, Punctuation, "["
+                inner = value[1:-1]
+                at = pos + 1
+                for part in re.split(r"(\s+)", inner):
+                    if part:
+                        kind_ = Name.Builtin if part in EL_TYPES else Number if re.fullmatch(r"-?[0-9.]+", part) else Name
+                        yield at, kind_, part
+                        at += len(part)
+                yield pos + len(value) - 1, Punctuation, "]"
+                continue
+            if kind == "free":
+                yield pos, Name.Exception, value
+                after_open = False
+                continue
+            if kind == "string":
+                yield pos, String, value
+                after_open = False
+                declare = None
+                continue
+            if kind == "number":
+                yield pos, Number, value
+                after_open = False
+                declare = None
+                continue
+            if kind != "word":
+                yield pos, (Punctuation if kind == "punct" else Text), value
+                after_open = False
+                continue
+            base = value.removesuffix("_").removesuffix("|none")
+            if after_open:
+                after_open = False
+                last_head = base
+                if base in EL_HEADS:
+                    yield pos, Keyword, value
+                    if not value.endswith("_"):
+                        if base in EL_FUNCTION_HEADS:
+                            declare = Name.Class
+                        elif base in EL_NAMED:
+                            declare = Name.Variable
+                    continue
+                if base == "free":
+                    yield pos, Name.Exception, value
+                elif base == "const" or base in EL_ARGUMENTS:
+                    yield pos, Name.Attribute, value
+                elif len(stack) >= 2 and stack[-2]:
+                    yield pos, Name.Variable, value
+                else:
+                    yield pos, Name.Function, value
+                continue
+            if declare is not None:
+                yield pos, declare, value
+                declare = None
+                continue
+            yield pos, (Keyword.Constant if value in EL_CONSTANTS else Name), value
+
+
+def _just_after_let(text, pos):
+    """Whether the parenthesis at pos opens the bindings of a let, as in (let ((i 1)) …)."""
+    return re.search(r"\(let_?\s+$", text[max(0, pos - 20):pos]) is not None
 
 
 class rule_node(nodes.General, nodes.Element):
