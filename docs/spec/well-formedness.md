@@ -43,10 +43,8 @@ These rules hold for a use of a name inside the form that declares or binds it:
    the group may not read the group.
 4. The `clip` and the `(defaults …)` of a collection may not read the collection, also after the
    defaults are given to its members ({numref}`collection-defaults`).
-
-A shape may read its own attributes, by
-its name or through the name that the `(as N)` of its motif binds, as long as
-{numref}`no-dependency-cycles` holds.
+5. A shape may read its own attributes, by its name or through the name that the `(as N)` of its
+   motif binds, as long as {numref}`no-dependency-cycles` holds.
 ```
 
 Every other read of a declaration in its own form, or of its collection, such as an `exists-when`
@@ -61,8 +59,9 @@ The {term}`controls <control>` and the {term}`listeners <listener>` are the writ
 This rule exists because the runtime keeps a bound or const container equal to its expression, so a write to one would have no effect.
 
 ```{rule} writable-targets
-The target of a writer or of a move is a free container ({numref}`variables`), written as a name
-or a qualified name ({numref}`what-a-name-means`). Also:
+The target of a writer or of a movement is a free container ({numref}`variables`), written as a
+name or a qualified name ({numref}`what-a-name-means`). Every other target is a compile error, and
+these also hold:
 
 - A target that stands for several containers ({doc}`concurrency`, the part "Containers") may be
   written to only when each of them is free. Such targets are a `pos`, an attribute of a group that
@@ -73,8 +72,6 @@ or a qualified name ({numref}`what-a-name-means`). Also:
   known when compiling. Writing to an item puts a new list into the container that holds the list.
 - A movement of an `on-show` or an `on-hide` writes to the stand-in of its shape, so it may write to an
   attribute of that shape that is bound ({doc}`lifecycle`).
-
-Every other target is a compile error.
 ```
 
 So `(slider s m (from 0) (to 1))` with `(real m (* 2 k))` is a compile error, and so is a movement whose
@@ -122,7 +119,9 @@ Bead mtp-ydd4.7.44.
 This rule exists to fix exactly what the prover proves, so that every conforming compiler accepts and rejects the same sources.
 
 ```{rule} prover-proves
-The prover proves exactly the following, and nothing else:
+For numbers, the prover uses only the ranges of {numref}`ranges` and {numref}`range-rules` and the
+narrowing of {numref}`if-narrowing`, and it checks each body once ({numref}`check-bodies-once`). It
+proves exactly the following, and nothing else:
 
 1. That every expression, except a clause, is accepted where it is written: its type without
    conditions is a subtype of the expected type without conditions ({numref}`form-types`), and its
@@ -141,9 +140,6 @@ The prover proves exactly the following, and nothing else:
    ({numref}`named-arguments-first`), or as an item of its body ({numref}`contexts`).
 7. That the source meets {numref}`no-dependency-cycles` to {numref}`writer-guards` and
    {numref}`movements-at-once`.
-
-For numbers it uses only the ranges of {numref}`ranges` and {numref}`range-rules` and the narrowing of
-{numref}`if-narrowing`, and it checks each body once ({numref}`check-bodies-once`).
 ```
 
 So the prover never uses a relation between two values: the range of the divisor of
@@ -171,8 +167,13 @@ has no smallest value above a number, so for a ratio, the end of `(> c)` is c, a
 This rule exists so that every compiler works out the same range for each expression.
 
 ```{rule} range-rules
-The range of each expression is the following. Where the table lists several ranges, the range is
-the part that they share.
+Where the table below lists several ranges for an expression, its range is the part that they
+share. Every range is clamped to the number limit, as the values of the expression are
+({numref}`number-limit`): an end beyond it is replaced by the end of the number limit, 10¹⁵⁰ or
+-10¹⁵⁰ for an int or a ratio, and `1e150` or `-1e150` for a real. The whole number limit is the
+range from the lower end to the upper end of the number limit. Each end in the table that is worked
+out from several ends, such as the sum of the lower ends, is one call of the same function on those
+ends, and is clamped once. The range of each expression is the following:
 
 | Expression | Its range |
 |---|---|
@@ -198,17 +199,6 @@ the part that they share.
 | a call of a function inside its own body | the range of its result type |
 | a call of another built-in function | the range that {doc}`stdlib` lists for it |
 | any other expression | the range of its type |
-
-Every range is clamped to the number limit, as the values of the expression are
-({numref}`number-limit`): an end beyond it is replaced by the end of the number limit, 10¹⁵⁰ or
--10¹⁵⁰ for an int or a ratio, and `1e150` or `-1e150` for a real. The whole number limit is the
-range from the lower end to the upper end of the number limit. Each end in the table that is worked
-out from several ends, such as the sum of the lower ends, is one call of the same function on those
-ends, and is clamped once.
-
-The item type of a `(list-of …)` whose items are not all known in the prove step, and whose items
-all have ranges, holds `(>= lo)` and `(<= hi)`, lo and hi being the smallest lower end and the
-largest upper end of the items.
 ```
 
 So `(map g (fn p (dist o p)))` is a `list[(real (>= 0))]` ({doc}`stdlib`).
@@ -216,6 +206,14 @@ So `(map g (fn p (dist o p)))` is a `list[(real (>= 0))]` ({doc}`stdlib`).
 With `(real k 1 (>= 0) (<= 10))`, the range of `(* 2 k)` is 0 to 20, and of `(- 5 k)`, -5 to 5. With
 `(func clamped ((real x) (real lo) (real hi)) (min hi (max lo x)))`, `(clamped x 0 1)` has the range 0
 to 1 whatever `x` is, by the row for a call.
+
+This rule exists so that the prover knows the range of the items of a list whose items are not all known while compiling.
+
+```{rule} list-item-ranges
+The item type of a `(list-of …)` whose items are not all known in the prove step, and whose items
+all have ranges, holds `(>= lo)` and `(<= hi)`, lo and hi being the smallest lower end and the
+largest upper end of the items.
+```
 
 This rule exists to determine which expressions may result in `none`, and so which types must include `none`.
 
