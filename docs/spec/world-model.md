@@ -62,7 +62,7 @@ variable declared at the top level is ({numref}`scopes`).
 So `(scene s (scale-y -1) …)` has y pointing down, as in SVG, while everything in the scene is
 still written, read and written to in the coordinates of the scene.
 
-This rule exists to define the tree of the scene and its collections, which sets what each collection holds and the order in which the runtime draws shapes.
+This rule exists to define the tree of the scene and its groups, which sets what each group holds and the order in which the runtime draws shapes.
 
 ```{rule} members
 The members of the scene and of a group are the shapes declared in its {term}`body`, in the order of
@@ -360,11 +360,11 @@ frame on its members: it moves them with its own frame.
 This rule exists so that a group can set an attribute once for all its members.
 
 ```{rule} collection-defaults
-A `(defaults (A V)…)` on a group sets `A` to `V` on each member, at any depth, that a
-collection may set `A` on and whose declaration does not set `A`, the nearest collection winning. On a
+A `(defaults (A V)…)` on a group sets `A` to `V` on each shape in the group that a group may set
+`A` on and whose declaration does not set `A`, the nearest group winning. On a
 member declared with a motif, each `(A V)` is added to its own `(defaults …)`. On a shape declared with
 a motif, which is not a collection ({doc}`data-model`), it sets `A` on every shape of the motif's body,
-at any depth, that has `A` and does not set it. Each `A` must be an attribute that a collection may set
+at any depth, that has `A` and does not set it. Each `A` must be an attribute that a group may set
 on its members ({numref}`default-attributes`), or it is a {term}`compile error`.
 ```
 

@@ -186,6 +186,9 @@ def visit_rule(self, node):
     self.body.append(f'<a class="mtp-rule-link" href="#{anchor}" title="Copy the link to this rule">')
     self.add_fignumber(node)
     self.body.append("</a>")
+    # The label, in gray at the right, so a reader can name the rule by its label (the author,
+    # 2026-11-27). It is plain text, not a link and not a pill.
+    self.body.append(f'<span class="mtp-rule-label">{html.escape(_rule_title(node))}</span>')
     self.body.append("</p>")
 
 
