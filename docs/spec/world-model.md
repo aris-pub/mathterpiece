@@ -302,8 +302,9 @@ from the shape. Its length is five stroke widths times `head-size`. A shape with
 head.
 ```
 
-So `(line v (to [3 1]) (stroke #'black') (head-end 'dart'))` is a vector, and
-`(head-start 'bar') (head-end 'bar')` marks a length.
+So `(line v (to [3 1]) (stroke #'black') (head-end 'dart'))` is drawn as an arrow from `[0 0]` to
+`[3 1]`, with its point at `[3 1]`. `(line m (to [3 0]) (stroke #'black') (head-start 'bar') (head-end 'bar'))`
+is drawn as a segment with a short bar across each end.
 
 This rule exists to fix how much of the outline of a shape the runtime draws for each value of `drawn`, since a movement of `drawn` draws a shape as a pen would.
 
