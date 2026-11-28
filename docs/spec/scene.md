@@ -486,12 +486,12 @@ So `(group grip (shift [1 2]) (fixed-size true) (circle c (x 10) (r 6)))` draws 
 pixels whose center is 10 pixels to the right of `[1 2]`, at the same size on screen in every canvas
 and at every zoom.
 
-The place where the disk appears, in the units of the scene, depends on the zoom of each canvas: in a
-canvas that shows 100 pixels per unit, its center appears at `[1.1 2]`, and in one that shows 50
-pixels per unit, at `[1.2 2]`. In an expression written outside the declaration of `grip`, such as
-`(line l (to grip.c.pos))`, `grip.c.pos` evaluates to `[1 2]` and `grip.c.x` to 1. The value of an
-expression depends only on what the expression reads ({numref}`evaluation-is-pure`), so it cannot
-depend on the zoom of a canvas, as the place where the disk appears does.
+When a canvas C draws a shape S that is a member of a group G, the position of S depends on the zoom
+of C. When C shows 100 pixels per scene unit, the center of S appears at `[1.1 2]`, and with 50 pixels
+per unit, at `[1.2 2]`. In an expression written outside the declaration of G, such as
+`(line l (to grip.c.pos))`, the expression `grip.c.pos` evaluates to `[1 2]` and `grip.c.x` to 1. The
+value of an expression depends only on what the expression reads ({numref}`evaluation-is-pure`), so
+it cannot depend on the zoom of a canvas, though the positions of shapes shown in a canvas do.
 
 In
 `(row r (gap 0.5) (circle a (r 1)) (group h (fixed-size true) (circle_ (r 6))) (circle b (r 1)))`, the
