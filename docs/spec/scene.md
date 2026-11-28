@@ -475,8 +475,8 @@ This rule exists so that a group can keep the same size on screen whatever a can
 ```{rule} fixed-size-groups
 In a group with `(fixed-size true)`, one unit is one screen pixel: the runtime draws its members as if
 the units of the scene were pixels, whatever a canvas shows. The frames of the group and of the
-collections that it is in apply to its members as to any shape. Outside the group, the position of each
-member of the group is the `shift` of the group. The box of the group has no width and no height: it is
+collections that it is in apply to its members as to any shape. In an expression written outside the
+declaration of the group, the position of each member of the group is the `shift` of the group. The box of the group has no width and no height: it is
 the single point at the `shift` of the group. The value of
 `fixed-size` is known when compiling, and a fixed-size group in a fixed-size group, at any depth, is
 a compile error.
@@ -486,13 +486,14 @@ So `(group grip (shift [1 2]) (fixed-size true) (circle c (x 10) (r 6)))` draws 
 pixels whose center is 10 pixels to the right of `[1 2]`, at the same size on screen in every canvas
 and at every zoom.
 
-Where `c` is in the units of the scene depends on the canvas: at 100 pixels per unit it is at
-`[1.1 2]`, and at 50 pixels per unit at `[1.2 2]`. Outside the group, `grip.c.pos`, `grip.c.x` and
-`(line l (to grip.c.pos))` read `c` at `[1 2]`, in every canvas. The value of an expression never
-depends on the canvas that draws it ({numref}`evaluation-is-pure`), and the position of `c` in the
-units of the scene would.
+The place where the disk appears, in the units of the scene, depends on the zoom of each canvas: in a
+canvas that shows 100 pixels per unit, its center appears at `[1.1 2]`, and in one that shows 50
+pixels per unit, at `[1.2 2]`. In an expression written outside the declaration of `grip`, such as
+`(line l (to grip.c.pos))`, `grip.c.pos` evaluates to `[1 2]` and `grip.c.x` to 1. The value of an
+expression depends only on what the expression reads ({numref}`evaluation-is-pure`), so it cannot
+depend on the zoom of a canvas, as the place where the disk appears does.
 
-For the same reason, in
+In
 `(row r (gap 0.5) (circle a (r 1)) (group h (fixed-size true) (circle_ (r 6))) (circle b (r 1)))`, the
 row places `h` as a point: the left edge of `b` is 0.5 to the right of that point, however wide `h` is
 on screen. A drag of a
