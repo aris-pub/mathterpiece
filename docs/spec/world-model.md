@@ -284,8 +284,8 @@ A line, a triangle, a polyline, a polygon and a
 bezier have no `x` and no `y` of their own. Their `x` and `y` are the mean of their ends, corners or
 points: of `from` and `to` for a line, of `a`, `b` and `c` for a triangle, of the points for a
 polyline and a polygon, `[0 0]` when there are none, and of `from`, `to` and the controls for a
-bezier. A write to the `x` of such a shape adds the same number to the x of each of those points, and
-a write to its `y` does the same with the y.
+bezier. A write of a value v to the `x` of such a shape adds v minus its current `x` to the x of each
+of those points, so that their mean becomes v, and a write to its `y` does the same with the y.
 ```
 
 So with `(line l (from [0 0]) (to [2 0]))`, `l.x` is 1, and a write of 3 to `l.x` moves the line to
