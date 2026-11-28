@@ -402,33 +402,33 @@ must have 'r'" (compiler.py:6571), and so is a spread over a member that is a co
 above. Bead mtp-ydd4.7.104.
 :::
 
-This rule exists to fix which attributes a collection may set on its members, since each member has only some of them.
+## Defaults on a group and on a shape declared with a motif
+
+This rule exists to fix which attributes a `(defaults …)` may give each kind of shape, since each kind has only some of them.
 
 ```{rule} default-attributes
-A collection may set these attributes on its members, and only on the members that have them:
-every attribute of `(like shape)` except the frame, but no `stroke`, `stroke-width`, `dash`,
-`dash-offset`, `line-cap`, `line-join` or `drawn` on a text. It may also set `halign`, `valign` and
-`face` on a text, `head-start`, `head-end` and `head-size` on a line, a polyline, a bezier and an arc,
-and `fixed-size` on a group.
+The default attributes of a shape are the attributes that a `(defaults …)` may give it: every
+attribute of `(like shape)` except the frame, and except `stroke`, `stroke-width`, `dash`,
+`dash-offset`, `line-cap`, `line-join` and `drawn` on a text, together with `halign`, `valign` and
+`face` on a text, `head-start`, `head-end` and `head-size` on a line, a polyline, a bezier and an
+arc, and `fixed-size` on a group.
 ```
-
-So `(group labels (defaults (fill #'gray') (halign 'middle') (stroke #'black')) …)` sets the
-fill and the alignment of each text in `labels`, and the stroke of each other shape, but not the
-stroke of a text, since a stroke would outline its letters. A collection never sets a position or a
-frame on its members: it moves them with its own frame.
-
-## Defaults on a group and on a shape declared with a motif
 
 This rule exists so that a group can set an attribute once for all its members.
 
 ```{rule} collection-defaults
-A `(defaults (A V)…)` on a group sets `A` to `V` on each shape in the group that a group may set
-`A` on and whose declaration does not set `A`, the nearest group winning. On a
+A `(defaults (A V)…)` on a group sets `A` to `V` on each shape in the group whose default attributes
+include `A` and whose declaration does not set `A`, the nearest group winning. On a
 member declared with a motif, each `(A V)` is added to its own `(defaults …)`. On a shape declared with
 a motif, which is not a collection ({doc}`data-model`), it sets `A` on every shape of the motif's body,
-at any depth, that has `A` and does not set it. Each `A` must be an attribute that a group may set
-on its members ({numref}`default-attributes`), or it is a {term}`compile error`.
+at any depth, whose default attributes include `A` and that does not set it. Each `A` must be a
+default attribute of some kind of shape ({numref}`default-attributes`), or it is a {term}`compile error`.
 ```
+
+So `(group labels (defaults (fill #'gray') (halign 'middle') (stroke #'black')) …)` sets the
+fill and the alignment of each text in `labels`, and the stroke of each other shape, but not the
+stroke of a text, since a stroke would outline its letters. A group never sets a position or a
+frame on its members: it moves them with its own frame.
 
 ## Rows and columns
 
