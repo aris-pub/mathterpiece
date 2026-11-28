@@ -228,7 +228,7 @@ This rule exists so that the runtime can find, for each write, the bound contain
 A bound container depends on each container that its expression may read: directly, through each
 function that it calls, and, where the container read is known only while drawing, as in
 `g[side].pos`, on each container that the read may read. A read of a position depends also on the
-attributes of each frame through which the runtime converts the value ({doc}`world-model`). When a
+attributes of each frame through which the runtime converts the value ({doc}`scene`). When a
 bound container A depends on a container B, and B depends on a container C, A depends on C too.
 ```
 

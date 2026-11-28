@@ -21,7 +21,7 @@ This rule exists so that the compiler may compute an expression ahead of time, a
 Evaluating an expression gives a value and changes nothing, no container, {term}`seed` or page
 element. The value depends only on what the expression reads: containers, {term}`bindings <binding>`,
 the seeds of its random functions, and, for a read of a position, the frame of the expression
-({doc}`world-model`).
+({doc}`scene`).
 ```
 
 ## What a name means

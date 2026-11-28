@@ -36,6 +36,8 @@ heads
 
 data-model
 world-model
+scene
+formulas
 scope
 imports
 types

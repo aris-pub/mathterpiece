@@ -233,7 +233,7 @@ This rule exists to give the functions that place one shape against another, by 
 ```
 
 `(top S)`, `(bottom S)`, `(left S)` and `(right S)` evaluate to the middle of that side of the box
-of S ({doc}`world-model`), and `(top-left S)` and the others to that corner of it, the top being
+of S ({doc}`scene`), and `(top-left S)` and the others to that corner of it, the top being
 toward the larger y. GAP, 0 when it is left out, moves the point out from the box by GAP on each
 side that the name gives. Each result is a `point`, in the frame of the expression that holds the
 call, as every read of a position is ({numref}`evaluation-is-pure`).
@@ -685,7 +685,7 @@ giving about five ticks.'
 ````
 
 Each motif also takes the arguments of every shape declared with a motif, such as `x`, `y` and
-`defaults` ({doc}`world-model`). So `(axes_ (ticks 1))` and `(grid_ (step 2))` in a scene, after
+`defaults` ({doc}`scene`). So `(axes_ (ticks 1))` and `(grid_ (step 2))` in a scene, after
 `(import marks axes grid)`, draw the axes with a tick at every whole number and a grid with a line
 every 2.
 
