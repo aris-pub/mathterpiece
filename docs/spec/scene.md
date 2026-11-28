@@ -355,7 +355,6 @@ This rule exists to fix the named arguments of the forms that declare a group.
 (group NAME
   (shift-x:real 0) (shift-y:real 0) (rotate:real 0) (scale-x:real 1) (scale-y:real 1)
   (defaults ITEMS:(A V)*)
-  (pointer-events:bool|none none)
   (clip:circle|rect|ellipse|triangle|polygon|ring|none none)
   (fixed-size:bool false)
   (doc:string '')
@@ -370,10 +369,10 @@ This rule exists to fix the named arguments of the forms that declare a group.
   (align:(string (one-of 'left' 'middle' 'right')) 'middle'))
 ```
 
-The parts of the frame of a group are attributes of it, and its other named arguments are not.
-`(pointer-events B)` means the same as `(pointer-events B)` in its `(defaults …)`, and a group that
-gives both is a compile error. Apart from its frame, its `name` and its `members` ({numref}`members`),
-a group has no attribute of its own.
+As for every other shape ({numref}`shape-signatures`), each named argument of a group is an
+attribute of it, of the type and with the default that the signature gives. The one exception is
+`(defaults …)`, which holds items and not a value, so it is a clause and not an attribute. Apart from
+these, its `name` and its `members` ({numref}`members`), a group has no attribute of its own.
 ````
 
 :::{admonition} Code differs
