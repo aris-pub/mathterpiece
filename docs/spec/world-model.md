@@ -156,10 +156,11 @@ This rule exists to fix the named arguments of each kind of shape, their types a
 
 ````{rule} shape-signatures
 These are the signatures of the shapes that are not groups. Each named argument in them is an
-attribute of the shape, of the type and with the default that the signature gives.
-`(like positioned)` stands for `(x:real 0) (y:real 0)`. The shapes in the first group take their
-position as arguments, and the shapes in the second take points, with no `x` or `y` among their
-arguments:
+attribute of the shape, of the type and with the default that the signature gives. `(like shape)`
+stands for the arguments of {numref}`shape-arguments`, and `(like positioned)` stands for
+`(x:real 0) (y:real 0)`. The shapes in the first group take their position as arguments. The shapes
+in the second group take points instead, and have no `x` or `y` among their arguments, but they
+still have the attributes `x` and `y`, which are worked out from their points:
 
 ```mtp-sig
 ; the shapes that take x and y
