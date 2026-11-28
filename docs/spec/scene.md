@@ -487,9 +487,9 @@ pixels whose center is 10 pixels to the right of `[1 2]`, at the same size on sc
 and at every zoom.
 
 Where `c` is in the units of the scene depends on the canvas: at 100 pixels per unit it is at
-`[1.1 2]`, and at 50 pixels per unit at `[1.2 2]`. A container holds one value, and one world model is
-drawn by every canvas at once, so a position outside the group cannot follow the canvas. So
-`grip.c.pos`, `grip.c.x` and `(line l (to grip.c.pos))` read `c` at `[1 2]`, in every canvas.
+`[1.1 2]`, and at 50 pixels per unit at `[1.2 2]`. Outside the group, `grip.c.pos`, `grip.c.x` and
+`(line l (to grip.c.pos))` read `c` at `[1 2]`, in every canvas. A position outside the group cannot
+follow the canvas, because a container holds one value and every canvas draws the same world model.
 
 For the same reason, in
 `(row r (gap 0.5) (circle a (r 1)) (group h (fixed-size true) (circle_ (r 6))) (circle b (r 1)))`, the
