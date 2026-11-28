@@ -19,3 +19,23 @@ source uses ({numref}`mtpc-imported-declarations`).
 So the world model holds every copy that a `foreach` makes and every shape that `(M …)` declares for
 a motif `M`, as the expand step writes them out ({numref}`compile-steps`). The runtime holds it as the
 {term}`live model`.
+
+## The compiled model
+
+This rule exists to define the compiled model, which carries a world model from the compiler to the runtime.
+
+```{rule} compiled-model
+The {term}`compiled model` of a world model is the .mtpc that the compiler writes for its source
+({numref}`compiler-input-output`). It holds every object of the world model, and for each container
+its value or its expression.
+```
+
+## The live model
+
+This rule exists to define the live model, the world model that the runtime draws and changes while a page is open.
+
+```{rule} live-model
+The {term}`live model` is the world model that the runtime builds from one compiled model
+({numref}`runtime-builds-live-model`), with the current value of each container. A page holds one
+live model for each compiled model that it loads.
+```
