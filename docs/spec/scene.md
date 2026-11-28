@@ -491,8 +491,10 @@ Where `c` is in the units of the scene depends on the canvas: at 100 pixels per 
 drawn by every canvas at once, so a position outside the group cannot follow the canvas. So
 `grip.c.pos`, `grip.c.x` and `(line l (to grip.c.pos))` read `c` at `[1 2]`, in every canvas.
 
-For the same reason, `(row r (gap 0.5) (circle a (r 1)) grip (circle b (r 1)))` places `grip` as a
-point: `b` starts 0.5 to the right of that point, however wide `grip` is on screen. A drag of a
+For the same reason, in
+`(row r (gap 0.5) (circle a (r 1)) (group h (fixed-size true) (circle_ (r 6))) (circle b (r 1)))`, the
+row places `h` as a point: the left edge of `b` is 0.5 to the right of that point, however wide `h` is
+on screen. A drag of a
 fixed-size group writes to its `shift` ({numref}`drag-group-shift`).
 
 ## Shapes that may not exist
