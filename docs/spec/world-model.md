@@ -137,16 +137,16 @@ mean the following.
 | Attribute | What it is |
 |---|---|
 | `fill` | the color of the inside of the shape, and with `none`, no fill. By default black on a light page and white on a dark one |
-| `stroke`, `stroke-width` | the color and the width of the outline of the shape, and with `none`, no outline |
+| `stroke`, `stroke-width` | the color and the width of the line that the runtime draws along the edge of the shape, its stroke, and with `none`, no stroke |
 | `opacity`, `fill-opacity`, `stroke-opacity` | how opaque the shape, its fill and its stroke are. The alpha of a color, `fill-opacity` and `stroke-opacity` multiply, and `opacity` fades the drawn shape as a whole, so a fill does not show through a stroke that overlaps it |
 | `dash`, `dash-offset` | the lengths of the dashes and the gaps between them in turn, and the distance by which that pattern is shifted along the stroke. `(dash L O)` sets `dash` to L and `dash-offset` to O, or to 0 when O is left out. With no `dash`, `dash` is `{}` and the stroke is solid |
 | `line-cap`, `line-join` | the shape of the ends of a stroke, and the shape of its corners |
-| `drawn` | the share of the outline that is drawn |
+| `drawn` | the share of the stroke that is drawn |
 | `pointer-events` | with `false`, the pointer passes through the shape to what is drawn under it, so the pointer triggers no listener on the shape |
 ```
 
-So `(circle c (stroke #'black') (dash {4 2}))` has a black outline of dashes 4 pixels long with
-gaps of 2 pixels, and `(move c.dash-offset (to 12) (duration 1))` moves the dashes along the outline.
+So `(circle c (stroke #'black') (dash {4 2}))` has a black stroke of dashes 4 pixels long with
+gaps of 2 pixels, and `(move c.dash-offset (to 12) (duration 1))` moves the dashes along the stroke.
 A `fill` of `none` and a fill whose alpha is 0 look the same, but the pointer tells them apart. The
 inside of a shape with a `fill` of `none` is not part of the shape for the pointer, so a press there
 triggers no listener on the shape and reaches what is drawn under it. A fill whose alpha is 0 is part
@@ -306,16 +306,16 @@ So `(line v (to [3 1]) (stroke #'black') (head-end 'dart'))` is drawn as an arro
 `[3 1]`, with its point at `[3 1]`. `(line m (to [3 0]) (stroke #'black') (head-start 'bar') (head-end 'bar'))`
 is drawn as a segment with a short bar across each end.
 
-This rule exists to fix how much of the outline of a shape the runtime draws for each value of `drawn`, since a movement of `drawn` draws a shape as a pen would.
+This rule exists to fix how much of the stroke of a shape the runtime draws for each value of `drawn`, since a movement of `drawn` draws a shape as a pen would.
 
-```{rule} drawn-outlines
-The runtime draws the share `drawn` of the outline of a shape, measured along the outline from its
-start, and the fill whole. The outline of each shape starts and runs as the table below gives, and is
-dashed as it is when whole. A head at the end of the outline is drawn at the end of the share drawn,
-and a head at its start is drawn when `drawn` is above 0. A text has no outline, so `drawn` changes
-nothing on a text.
+```{rule} drawn-strokes
+The runtime draws the share `drawn` of the stroke of a shape, measured along the stroke from its
+start, and the fill whole. The stroke of each shape starts and runs as the table below gives, and is
+dashed as it is when whole. A head at the end of the stroke is drawn at the end of the share drawn,
+and a head at its start is drawn when `drawn` is above 0. The stroke of a text is always drawn whole,
+so `drawn` changes nothing on a text.
 
-| Shape | Where its outline starts, and the way it runs |
+| Shape | Where its stroke starts, and the way it runs |
 |---|---|
 | circle, ellipse | at the angle 0, counterclockwise |
 | rect | on its bottom side, at the left end of its straight part, counterclockwise |
@@ -327,8 +327,9 @@ nothing on a text.
 | ring over part of a turn | at `from` on its outer edge, along that edge to `to`, in to the inner edge or to the center, back along the inner edge, and out to where it started |
 ```
 
-So `(move c.drawn (from 0) (to 1) (duration 1))` draws the outline of a circle `c` over one
-second. A shape with no stroke has no outline to draw.
+So `(move c.drawn (from 0) (to 1) (duration 1))` draws the stroke of a circle `c` over one
+second. A shape whose `stroke` is `none` or whose `stroke-width` is 0 shows no stroke and no heads,
+so a change of its `drawn` shows nothing.
 
 ## Frames
 
