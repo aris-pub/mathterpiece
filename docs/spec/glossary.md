@@ -414,7 +414,7 @@ movement group
 
 motif
   A shape type, `(motif M PARAMS ITEM…)`. `(M N …)` declares an `M`: the body of the motif with the
-  values of its parameters. Defined in {doc}`world-model`.
+  values of its parameters. Defined in {doc}`scene`.
 
 animation
   A template of movements, `(animation N PARAMS ITEM…)`, as a motif is a template of shapes. With an

@@ -15,7 +15,7 @@ The top level of a source holds only forms whose heads are in these tables, with
 |---|---|---|
 | `type` | core | {numref}`type-notation` |
 | `interface` | core | {doc}`types` |
-| `motif` | core | {doc}`world-model` |
+| `motif` | core | {doc}`scene` |
 | `variant` | core | {doc}`types` |
 | `animation` | core | {doc}`time` |
 
@@ -23,9 +23,9 @@ The top level of a source holds only forms whose heads are in these tables, with
 
 | Head | Kind | Defined in |
 |---|---|---|
-| `scene` | core | {doc}`world-model` |
-| `formula` | core | {doc}`world-model` |
-| `record` | core | {doc}`world-model` |
+| `scene` | core | {doc}`scene` |
+| `formula` | core | {doc}`formulas` |
+| `record` | core | {doc}`data-model` |
 | `font` | core | {doc}`data-model` |
 | `palette` | syntactic sugar | {numref}`sugar-rewrites` |
 | `parametric` | syntactic sugar | {numref}`sugar-rewrites` |
@@ -113,31 +113,31 @@ mtp-ydd4.7.59.
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `background` | core | a clause | {doc}`world-model` |
-| `shift`, `shift-x`, `shift-y`, `rotate`, `scale-x`, `scale-y` in the scene | core | a clause | {doc}`world-model` |
-| `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text` | core | a declaration | {doc}`world-model` |
-| `group` | core | a declaration | {doc}`world-model` |
-| `row`, `column` | core | a declaration | {doc}`world-model` |
-| `(M N …)` for a motif `M` | core | a declaration | {doc}`world-model` |
-| `(V N …)` for a variant `V` | core | a declaration | {doc}`world-model` |
-| `(H\|none N …)` for a shape head `H` | core | a declaration | {doc}`world-model` |
-| `exists-when` | core | a clause | {doc}`world-model` |
+| `background` | core | a clause | {doc}`scene` |
+| `shift`, `shift-x`, `shift-y`, `rotate`, `scale-x`, `scale-y` in the scene | core | a clause | {doc}`scene` |
+| `circle`, `rect`, `ellipse`, `line`, `triangle`, `polyline`, `polygon`, `bezier`, `arc`, `ring`, `text` | core | a declaration | {doc}`scene` |
+| `group` | core | a declaration | {doc}`scene` |
+| `row`, `column` | core | a declaration | {doc}`scene` |
+| `(M N …)` for a motif `M` | core | a declaration | {doc}`scene` |
+| `(V N …)` for a variant `V` | core | a declaration | {doc}`scene` |
+| `(H\|none N …)` for a shape head `H` | core | a declaration | {doc}`scene` |
+| `exists-when` | core | a clause | {doc}`scene` |
 | `let` in a body | core | a special form | {doc}`binding-time` |
 | `foreach` in a body | core | a special form | {doc}`binding-time` |
-| a variable in the scene | core | a declaration | {doc}`world-model` |
+| a variable in the scene | core | a declaration | {doc}`scene` |
 
 ## Arguments of shapes and collections
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| `x`, `y`, `shift`, `shift-x`, `shift-y`, `rotate`, `scale-x`, `scale-y`, `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`, `line-cap`, `line-join`, `drawn`, `pointer-events` on a shape, `r`, `width`, `height`, `rx`, `ry`, `from`, `to`, `a`, `b`, `c`, `points`, `controls`, `head-start`, `head-end`, `head-size`, `value`, `halign`, `valign`, `face` | core | a clause | {doc}`world-model` |
+| `x`, `y`, `shift`, `shift-x`, `shift-y`, `rotate`, `scale-x`, `scale-y`, `fill`, `stroke`, `stroke-width`, `opacity`, `fill-opacity`, `stroke-opacity`, `line-cap`, `line-join`, `drawn`, `pointer-events` on a shape, `r`, `width`, `height`, `rx`, `ry`, `from`, `to`, `a`, `b`, `c`, `points`, `controls`, `head-start`, `head-end`, `head-size`, `value`, `halign`, `valign`, `face` | core | a clause | {doc}`scene` |
 | `pos` | syntactic sugar | a clause | {numref}`sugar-rewrites` |
-| `dash` | core | a clause | {doc}`world-model` |
+| `dash` | core | a clause | {doc}`scene` |
 | `like` | syntactic sugar | a clause | {numref}`like-copies` |
 | `defaults` on a group | core | a clause | {numref}`collection-defaults` |
-| `clip` | core | a clause | {doc}`world-model` |
-| `fixed-size` | core | a clause | {doc}`world-model` |
-| `gap`, `align` | core | a clause | {doc}`world-model` |
+| `clip` | core | a clause | {doc}`scene` |
+| `fixed-size` | core | a clause | {doc}`scene` |
+| `gap`, `align` | core | a clause | {doc}`scene` |
 
 ## Motifs and variants
 
@@ -145,14 +145,14 @@ mtp-ydd4.7.59.
 |---|---|---|---|
 | a parameter `(T N DEFAULT?)` | core | a clause | {doc}`types` |
 | a shape or a bound or const variable in a motif's body | core | a declaration |
-| `foreach` or `let` in a motif's body | core | a special form | {doc}`world-model` |
-| `exists-when` in a motif's body | core | a clause | {doc}`world-model` |
+| `foreach` or `let` in a motif's body | core | a special form | {doc}`scene` |
+| `exists-when` in a motif's body | core | a clause | {doc}`scene` |
 | `as` in a motif | core | a clause | {doc}`scope` |
-| a parameter given to an `M`, for a motif `M`, `(P X)` | core | a clause | {doc}`world-model` |
-| `x`, `y`, `shift`, `shift-x`, `shift-y`, `rotate`, `scale-x`, `scale-y` on an `M` | core | a clause | {doc}`world-model` |
+| a parameter given to an `M`, for a motif `M`, `(P X)` | core | a clause | {doc}`scene` |
+| `x`, `y`, `shift`, `shift-x`, `shift-y`, `rotate`, `scale-x`, `scale-y` on an `M` | core | a clause | {doc}`scene` |
 | `pos` on an `M` | syntactic sugar | a clause | {numref}`sugar-rewrites` |
-| `clip` on an `M` | core | a clause | {doc}`world-model` |
-| `defaults` on an `M` | core | a clause | {doc}`world-model` |
+| `clip` on an `M` | core | a clause | {doc}`scene` |
+| `defaults` on an `M` | core | a clause | {doc}`scene` |
 | `like` on an `M` or on a `V`, for a variant `V` | syntactic sugar | a clause | {numref}`like-copies` |
 
 The rules about a declaration that reads itself or its collection, such as a default that reads
@@ -162,8 +162,8 @@ its own group, are {numref}`self-reference` and {numref}`no-dependency-cycles`.
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| a variable in a record | core | a declaration | {doc}`world-model` |
-| `record`, `palette` in a record | core, syntactic sugar | a declaration | {doc}`world-model`, {numref}`sugar-rewrites` |
+| a variable in a record | core | a declaration | {doc}`data-model` |
+| `record`, `palette` in a record | core, syntactic sugar | a declaration | {doc}`data-model`, {numref}`sugar-rewrites` |
 | `(M C)` in a palette | syntactic sugar | a declaration | {numref}`sugar-rewrites` |
 | `(T A C…)` in an interface | core | a clause | {doc}`types` |
 | `family`, `style`, `weight`, `size` | core | a clause | {doc}`data-model` |
@@ -173,14 +173,14 @@ its own group, are {numref}`self-reference` and {numref}`no-dependency-cycles`.
 
 | Head | Kind | What it is | Defined in |
 |---|---|---|---|
-| a string known when compiling | core | the positional argument of a formula | {doc}`world-model` |
-| `term` | core | a declaration | {doc}`world-model` |
-| `fill`, `opacity`, `background`, `outline`, `outline-width`, `padding`, `rounding` in a term | core | a clause | {doc}`world-model` |
-| a string in a term | core | the positional argument of a term | {doc}`world-model` |
+| a string known when compiling | core | the positional argument of a formula | {doc}`formulas` |
+| `term` | core | a declaration | {doc}`formulas` |
+| `fill`, `opacity`, `background`, `outline`, `outline-width`, `padding`, `rounding` in a term | core | a clause | {doc}`formulas` |
+| a string in a term | core | the positional argument of a term | {doc}`formulas` |
 | `like` in a term | syntactic sugar | a clause | {numref}`like-copies` |
 | `defaults` in a formula | core | a clause | {numref}`formula-defaults` |
-| `exists-when` in a formula | core | a clause | {doc}`world-model` |
-| a variable in a formula | core | a declaration | {doc}`world-model` |
+| `exists-when` in a formula | core | a clause | {doc}`formulas` |
+| a variable in a formula | core | a declaration | {doc}`formulas` |
 
 ## Literals, names and compounds
 

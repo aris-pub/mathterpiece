@@ -242,7 +242,7 @@ the value of a type that has no default value is a compile error.
 | `bool` | `false` |
 | `string` | `''` |
 | `color` | black, `#'#000000'` |
-| `font` | the font of the defaults of a font ({doc}`world-model`) |
+| `font` | the font of the defaults of a font ({doc}`scene`) |
 | `point` | `[0 0]` |
 | `list[T]` | `{}`, and with `(length n)`, n items, each the value of T |
 | a union with `none` | `none` |
@@ -357,7 +357,7 @@ So with `(type side string (one-of 'left' 'right'))`, a `side` is a string, and 
 string variable `q`, since a writer may write any string to `q`. A write of a string that is not
 among the choices to a `side` has no effect ({numref}`writes-to-conditions`). The alignments
 of a text, the caps and joins of a stroke, the heads of a line and the style of a font are choice
-types ({doc}`world-model`).
+types ({doc}`scene`).
 
 :::{admonition} Code differs
 :class: note
