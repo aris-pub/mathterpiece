@@ -488,8 +488,9 @@ and at every zoom.
 
 Where `c` is in the units of the scene depends on the canvas: at 100 pixels per unit it is at
 `[1.1 2]`, and at 50 pixels per unit at `[1.2 2]`. Outside the group, `grip.c.pos`, `grip.c.x` and
-`(line l (to grip.c.pos))` read `c` at `[1 2]`, in every canvas. A position outside the group cannot
-follow the canvas, because a container holds one value and every canvas draws the same world model.
+`(line l (to grip.c.pos))` read `c` at `[1 2]`, in every canvas. The value of an expression never
+depends on the canvas that draws it ({numref}`evaluation-is-pure`), and the position of `c` in the
+units of the scene would.
 
 For the same reason, in
 `(row r (gap 0.5) (circle a (r 1)) (group h (fixed-size true) (circle_ (r 6))) (circle b (r 1)))`, the
