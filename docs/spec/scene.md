@@ -470,7 +470,7 @@ sides.
 
 ## Fixed-size groups
 
-This rule exists so that a group can keep the same size on screen, as a handle that the reader drags must.
+This rule exists so that a group can keep the same size on screen whatever a canvas shows and however far the reader zooms in.
 
 ```{rule} fixed-size-groups
 In a group with `(fixed-size true)`, one unit is one screen pixel: the runtime draws its members as if
